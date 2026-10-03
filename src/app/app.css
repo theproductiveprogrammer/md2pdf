@@ -40,7 +40,8 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
   flex-shrink: 0;
 }
 .brand { font-weight: 700; letter-spacing: -0.01em; }
-.file { color: var(--muted); max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file { color: var(--muted); font-size: 12px; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dirty { color: var(--accent); margin-left: 4px; }
 .spacer { flex: 1; }
 .hint { color: var(--muted); font-size: 12px; }
@@ -78,7 +79,8 @@ main { flex: 1; min-height: 0; position: relative; }
 body:not([data-tab="write"]) #write,
 body:not([data-tab="preview"]) #preview { visibility: hidden; }
 
-#write { background: var(--surface); overflow: hidden; }
+#write { background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
+#editor { flex: 1; min-height: 0; }
 #write .cm-editor { height: 100%; font-size: 14px; }
 #write .cm-scroller { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; line-height: 1.6; }
 #write .cm-content { max-width: 80ch; margin: 0 auto; padding: 32px 16px 50vh; }
@@ -131,3 +133,46 @@ body:not([data-tab="preview"]) #tools { display: none; }
 .reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 0 2px; }
 .check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .check input { accent-color: var(--accent); margin: 0; }
+
+/* Document form (Write tab) — mirrors the YAML front matter both ways. */
+#details { border-bottom: 1px solid var(--line); background: var(--bg); flex-shrink: 0; max-height: 50%; overflow: auto; }
+.doc-details { max-width: calc(80ch + 32px); margin: 0 auto; padding: 0 16px; }
+.doc-details summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.doc-details summary::-webkit-details-marker { display: none; }
+.doc-details summary::before { content: "▸"; color: var(--muted); font-size: 11px; transition: transform 0.15s; }
+.doc-details[open] summary::before { transform: rotate(90deg); }
+.summary-hint { font-weight: 400; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.doc-details[open] .summary-hint { display: none; }
+.form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.text-field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; min-width: 0; }
+.text-field input, .slot {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+.text-field input:focus, .slot:focus { outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: -1px; border-color: var(--accent); }
+.text-field input::placeholder, .slot::placeholder { color: var(--muted); opacity: 0.7; }
+.slot-grid { display: grid; grid-template-columns: auto 1fr 1fr 1fr auto; gap: 8px 10px; align-items: center; margin-top: 12px; }
+.row-label { color: var(--muted); font-size: 12px; }
+.slot-grid .check { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.form-hint { margin: 10px 0 12px; color: var(--muted); font-size: 12px; }
+.form-hint code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 3px; }
+.form-error { color: var(--danger); margin: 0 0 12px; }
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .slot-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .row-label, .slot-grid .check { grid-column: 1 / -1; }
+}

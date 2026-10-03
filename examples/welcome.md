@@ -7,6 +7,10 @@ footer: { left: "{title}", right: "{page} / {pages}" }
 
 Type markdown here, then press **⌘↵** to see the pages. "Smart quotes" -- and dashes --- just happen... It's the '90s all over again.
 
+## Title, header & footer
+
+Fill in the **Document** form above the editor: title, author, date, and header/footer text. It writes the YAML block at the top of this file for you, and editing the YAML updates the form.
+
 ## Themes & settings
 
 On the Preview tab, pick a theme (hover to try one, or press `[` and `]`), paper size, margins, fonts and accent colour. Every choice is written into the YAML block at the top, so it's saved with the document.

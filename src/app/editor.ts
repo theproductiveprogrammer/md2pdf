@@ -1,5 +1,6 @@
 import { basicSetup, EditorView } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
+import { yamlFrontmatter } from "@codemirror/lang-yaml";
 import { Prec } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 
@@ -44,7 +45,7 @@ async function insertImages(view: EditorView, files: File[], pos: number, hooks:
 }
 
 // The problem is the user types or pastes markdown and needs a comfortable editor that also owns our shortcuts.
-// The way we solve this is CodeMirror with markdown highlighting, soft wrap, image drop/paste, and ⌘↵ / ⌘S bound above the default keymap.
+// The way we solve this is CodeMirror with markdown + YAML front-matter highlighting, soft wrap, image drop/paste, and ⌘↵ / ⌘S bound above the default keymap.
 // Understand: basicSetup already binds Mod-Enter (insert blank line), so ours must be Prec.highest to win.
 // flow: app start -> main() -> createEditor() <-- HERE
 export function createEditor(parent: HTMLElement, doc: string, hooks: EditorHooks): EditorView {
@@ -59,7 +60,7 @@ export function createEditor(parent: HTMLElement, doc: string, hooks: EditorHook
         ]),
       ),
       basicSetup,
-      markdown(),
+      yamlFrontmatter({ content: markdown() }),
       EditorView.lineWrapping,
       EditorView.domEventHandlers({
         drop(event, view) {

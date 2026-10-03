@@ -1,4 +1,4 @@
-import { isCollection, parse as parseYaml, parseDocument } from "yaml";
+import { isCollection, isMap, isScalar, parse as parseYaml, parseDocument } from "yaml";
 
 export interface Slots {
   left?: string;
@@ -54,6 +54,8 @@ export interface ParsedDoc {
   fallbackTitle: string;
   error: string | null;
 }
+
+const LEADING_KEYS = ["title", "author", "date"];
 
 export const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
@@ -149,6 +151,14 @@ export function editFrontMatter(source: string, path: string[], value: unknown):
       const parent = doc.getIn(path.slice(0, depth), true);
       if (isCollection(parent) && parent.items.length === 0) doc.deleteIn(path.slice(0, depth));
     }
+  } else if (path.length === 1 && LEADING_KEYS.includes(path[0]) && isMap(doc.contents) && !doc.has(path[0])) {
+    // New title/author/date go at the top in a fixed order, so clearing and retyping a field doesn't shuffle the YAML.
+    const rank = LEADING_KEYS.indexOf(path[0]);
+    const items = doc.contents.items;
+    const rankOf = (i: number) => LEADING_KEYS.indexOf(String(isScalar(items[i].key) ? items[i].key.value : items[i].key));
+    let at = 0;
+    while (at < items.length && rankOf(at) !== -1 && rankOf(at) < rank) at++;
+    items.splice(at, 0, doc.createPair(path[0], value));
   } else doc.setIn(path, value);
   const empty = doc.contents == null || (isCollection(doc.contents) && doc.contents.items.length === 0);
   const yaml = empty ? "" : doc.toString().trimEnd();
