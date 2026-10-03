@@ -1,4 +1,4 @@
-import { parse as parseYaml } from "yaml";
+import { isCollection, parse as parseYaml, parseDocument } from "yaml";
 
 export interface Slots {
   left?: string;
@@ -7,78 +7,151 @@ export interface Slots {
   skipFirst?: boolean;
 }
 
-export interface DocConfig {
+export interface DocSettings {
   title: string;
   author: string;
   date: string;
   lang: string;
+  theme: string;
   page: { size: string; margin: string };
   header: Slots | false;
   footer: Slots | false;
   breakBeforeH1: boolean;
   typography: boolean;
+  fonts: { body: string; heading: string; mono: string };
+  colors: { accent: string };
+}
+
+// What a theme may preset; front matter always wins over these.
+export interface ThemeDefaults {
+  page?: Partial<DocSettings["page"]>;
+  header?: Slots | false;
+  footer?: Slots | false;
+  breakBeforeH1?: boolean;
+  fonts: DocSettings["fonts"];
+  colors: DocSettings["colors"];
+}
+
+// Only the keys the user actually wrote in front matter.
+export interface Overrides {
+  title?: string;
+  author?: string;
+  date?: string;
+  lang?: string;
+  theme?: string;
+  page?: Partial<DocSettings["page"]>;
+  header?: Slots | false;
+  footer?: Slots | false;
+  breakBeforeH1?: boolean;
+  typography?: boolean;
+  fonts?: Partial<DocSettings["fonts"]>;
+  colors?: Partial<DocSettings["colors"]>;
 }
 
 export interface ParsedDoc {
-  config: DocConfig;
+  overrides: Overrides;
   body: string;
+  fallbackTitle: string;
   error: string | null;
 }
 
-const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+export const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
-// The problem is a document with no front matter should still print nicely, with a sensible title and page numbers.
-// The way we solve this is to fill every setting with a default, deriving the title from the first H1 or the file name.
-function defaults(body: string, fileName: string | null): DocConfig {
-  const h1 = body.match(/^#\s+(.+)$/m)?.[1].trim();
-  const lang = "en";
-  return {
-    title: h1 ?? fileName?.replace(/\.md$/i, "") ?? "Untitled",
-    author: "",
-    date: new Date().toLocaleDateString(lang, { year: "numeric", month: "long", day: "numeric" }),
-    lang,
-    page: { size: "A4", margin: "20mm 18mm" },
-    header: false,
-    footer: { center: "{page} / {pages}" },
-    breakBeforeH1: false,
-    typography: true,
-  };
-}
+const formatDate = (d: Date, lang: string) => d.toLocaleDateString(lang, { year: "numeric", month: "long", day: "numeric" });
 
-// The problem is the user configures fonts, page size and header/footer per document by writing YAML at the top of the markdown.
-// The way we solve this is to split off the YAML, merge it over the defaults, and report bad YAML without blocking the preview.
+const pick = <T extends object>(v: unknown, keys: (keyof T)[]): Partial<T> | undefined => {
+  if (!v || typeof v !== "object") return undefined;
+  const out: Partial<T> = {};
+  for (const k of keys) {
+    const val = (v as Record<string, unknown>)[k as string];
+    if (val != null) (out as Record<string, unknown>)[k as string] = String(val);
+  }
+  return out;
+};
+
+const slots = (v: unknown): Slots | false | undefined => (v === false ? false : v && typeof v === "object" ? (v as Slots) : undefined);
+
+// The problem is the user configures theme, fonts, page size and header/footer by writing YAML at the top of the markdown.
+// The way we solve this is to split off the YAML and keep only what the user set, reporting bad YAML without blocking the preview.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> parseDoc() <-- HERE
 export function parseDoc(source: string, fileName: string | null): ParsedDoc {
   const match = source.match(FRONT_MATTER);
   const body = match ? source.slice(match[0].length) : source;
-  const config = defaults(body, fileName);
-  if (!match) return { config, body, error: null };
+  const fallbackTitle = body.match(/^#\s+(.+)$/m)?.[1].trim() ?? fileName?.replace(/\.md$/i, "") ?? "Untitled";
+  if (!match) return { overrides: {}, body, fallbackTitle, error: null };
 
   let meta: Record<string, unknown>;
   try {
     meta = (parseYaml(match[1]) ?? {}) as Record<string, unknown>;
+    if (typeof meta !== "object") throw new Error("expected key: value pairs");
   } catch (err) {
-    return { config, body, error: `Front matter: ${(err as Error).message}` };
+    return { overrides: {}, body, fallbackTitle, error: `Front matter: ${(err as Error).message}` };
   }
 
-  const str = (v: unknown, fallback: string) => (v == null ? fallback : String(v));
-  const slots = (v: unknown, fallback: Slots | false): Slots | false =>
-    v === false ? false : v && typeof v === "object" ? (v as Slots) : fallback;
-  const page = (meta.page ?? {}) as Record<string, unknown>;
-
+  const str = (v: unknown) => (v == null ? undefined : String(v));
+  const lang = str(meta.lang);
   return {
     body,
+    fallbackTitle,
     error: null,
-    config: {
-      title: str(meta.title, config.title),
-      author: str(meta.author, config.author),
-      date: meta.date instanceof Date ? meta.date.toLocaleDateString(str(meta.lang, "en"), { year: "numeric", month: "long", day: "numeric" }) : str(meta.date, config.date),
-      lang: str(meta.lang, config.lang),
-      page: { size: str(page.size, config.page.size), margin: str(page.margin, config.page.margin) },
-      header: slots(meta.header, config.header),
-      footer: slots(meta.footer, config.footer),
-      breakBeforeH1: meta.breakBeforeH1 === true,
-      typography: meta.typography !== false,
+    overrides: {
+      title: str(meta.title),
+      author: str(meta.author),
+      date: meta.date instanceof Date ? formatDate(meta.date, lang ?? "en") : str(meta.date),
+      lang,
+      theme: str(meta.theme),
+      page: pick(meta.page, ["size", "margin"]),
+      header: slots(meta.header),
+      footer: slots(meta.footer),
+      breakBeforeH1: typeof meta.breakBeforeH1 === "boolean" ? meta.breakBeforeH1 : undefined,
+      typography: typeof meta.typography === "boolean" ? meta.typography : undefined,
+      fonts: pick(meta.fonts, ["body", "heading", "mono"]),
+      colors: pick(meta.colors, ["accent"]),
     },
   };
+}
+
+// The problem is the same document must look right under every theme, each with its own fonts, margins and footer.
+// The way we solve this is a three-layer merge: built-in defaults, then the theme's presets, then whatever the user wrote.
+// flow: Preview tab — renderDoc() -> composeFor(theme) -> resolveSettings() <-- HERE
+// flow: Preview tab — user opens the toolbar -> drawTools() -> resolveSettings() <-- HERE
+export function resolveSettings(parsed: ParsedDoc, themeId: string, theme: ThemeDefaults): DocSettings {
+  const o = parsed.overrides;
+  const lang = o.lang ?? "en";
+  return {
+    title: o.title ?? parsed.fallbackTitle,
+    author: o.author ?? "",
+    date: o.date ?? formatDate(new Date(), lang),
+    lang,
+    theme: themeId,
+    page: { size: "A4", margin: "20mm", ...theme.page, ...o.page },
+    header: o.header ?? theme.header ?? false,
+    footer: o.footer ?? theme.footer ?? { center: "{page} / {pages}" },
+    breakBeforeH1: o.breakBeforeH1 ?? theme.breakBeforeH1 ?? false,
+    typography: o.typography ?? true,
+    fonts: { ...theme.fonts, ...o.fonts },
+    colors: { ...theme.colors, ...o.colors },
+  };
+}
+
+// The problem is toolbar changes (theme, size, fonts…) must land in the markdown itself so they're saved with the doc.
+// The way we solve this is to edit the YAML in place with the yaml Document API, which keeps the user's comments and layout.
+// Understand: returns only the front-matter range to replace, so the editor keeps cursor position and undo history for the body.
+// flow: Preview tab — user changes a toolbar control -> setSetting() -> editFrontMatter() <-- HERE
+export function editFrontMatter(source: string, path: string[], value: unknown): { from: number; to: number; insert: string } | { error: string } {
+  const match = source.match(FRONT_MATTER);
+  const doc = parseDocument(match ? match[1] : "");
+  if (doc.errors.length) return { error: `Fix the front matter first: ${doc.errors[0].message}` };
+  if (value === undefined) {
+    doc.deleteIn(path);
+    // Prune parents the delete left empty, e.g. `colors: {}` after resetting the accent.
+    for (let depth = path.length - 1; depth > 0; depth--) {
+      const parent = doc.getIn(path.slice(0, depth), true);
+      if (isCollection(parent) && parent.items.length === 0) doc.deleteIn(path.slice(0, depth));
+    }
+  } else doc.setIn(path, value);
+  const empty = doc.contents == null || (isCollection(doc.contents) && doc.contents.items.length === 0);
+  const yaml = empty ? "" : doc.toString().trimEnd();
+  const insert = yaml ? `---\n${yaml}\n---\n` : "";
+  return { from: 0, to: match ? match[0].length : 0, insert: match || !yaml ? insert : `${insert}\n` };
 }

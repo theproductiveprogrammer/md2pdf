@@ -43,8 +43,46 @@ function resolveImagesPlugin(md: Md, docDir: string) {
   });
 }
 
+// The problem is a standalone image with a caption should print as a proper figure that never splits from its caption.
+// The way we solve this is to turn a paragraph holding only an image into <figure>, with the image title rendered as <figcaption>.
+// flow: Preview tab — user switches to Preview -> renderMarkdown() -> figurePlugin <-- HERE
+function figurePlugin(md: Md) {
+  md.core.ruler.push("figure", (state) => {
+    const tokens = state.tokens;
+    for (let i = 1; i < tokens.length - 1; i++) {
+      const inline = tokens[i];
+      if (inline.type !== "inline" || tokens[i - 1].type !== "paragraph_open" || tokens[i + 1].type !== "paragraph_close") continue;
+      const parts = (inline.children ?? []).filter((c) => c.type !== "softbreak" && !(c.type === "text" && !c.content.trim()));
+      if (parts.length !== 1 || parts[0].type !== "image") continue;
+
+      const img = parts[0];
+      tokens[i - 1].tag = tokens[i + 1].tag = "figure";
+      inline.children = [img];
+      const caption = img.attrGet("title");
+      if (caption) {
+        img.attrs = (img.attrs ?? []).filter(([k]) => k !== "title");
+        const cap = new state.Token("html_inline", "", 0);
+        cap.content = `<figcaption>${md.renderInline(String(caption))}</figcaption>`;
+        inline.children.push(cap);
+      }
+    }
+  });
+}
+
+// The problem is themes want to style the paragraph right after the title (drop cap, subtitle, contact line).
+// The way we solve this is to tag it with class "lead", because Paged.js drops `h1 + p::first-letter`-style rules.
+// Understand: Paged.js rewrites every `A + B` selector into a data attribute, which loses pseudo-elements.
+function leadParagraphPlugin(md: Md) {
+  md.core.ruler.push("lead_paragraph", (state) => {
+    state.tokens.forEach((t, i) => {
+      const prev = state.tokens[i - 1];
+      if (t.type === "paragraph_open" && prev?.type === "heading_close" && prev.tag === "h1") t.attrJoin("class", "lead");
+    });
+  });
+}
+
 // The problem is turning the user's markdown into print-ready HTML with smart typography, page breaks and working images.
-// The way we solve this is markdown-it with typographer on, plus our pagebreak, image-path and typography plugins.
+// The way we solve this is markdown-it with typographer on, plus our pagebreak, typography, figure and image-path plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
 export function renderMarkdown(body: string, opts: { docPath: string | null; typography: boolean }): string {
   const docDir = opts.docPath?.includes("/") ? opts.docPath.slice(0, opts.docPath.lastIndexOf("/") + 1) : "";
@@ -52,6 +90,8 @@ export function renderMarkdown(body: string, opts: { docPath: string | null; typ
     .use(attrs)
     .use(pagebreakPlugin)
     .use(typographyPlugin)
+    .use(figurePlugin)
+    .use(leadParagraphPlugin)
     .use(resolveImagesPlugin, docDir);
   return md.render(body);
 }

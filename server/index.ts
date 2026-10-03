@@ -8,6 +8,9 @@ import { createServer as createVite } from "vite";
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PAGED_POLYFILL = path.join(APP_DIR, "node_modules/pagedjs/dist/paged.polyfill.js");
 
+const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"]);
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
 const MIME: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
   ".webp": "image/webp", ".svg": "image/svg+xml", ".avif": "image/avif",
@@ -43,11 +46,39 @@ async function readBody(req: http.IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+async function readBytes(req: http.IncomingMessage, limit: number): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > limit) return null;
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
+// The problem is two dropped screenshots both called "image.png" must not overwrite each other.
+// The way we solve this is to append -1, -2… until the name is free; the exclusive "wx" flag makes the check and write atomic.
+async function writeUnique(dir: string, name: string, data: Buffer): Promise<string> {
+  const ext = path.extname(name);
+  const stem = path.basename(name, ext).replace(/[^\w.-]+/g, "-") || "image";
+  for (let i = 0; ; i++) {
+    const candidate = i ? `${stem}-${i}${ext}` : `${stem}${ext}`;
+    try {
+      await fs.writeFile(path.join(dir, candidate), data, { flag: "wx" });
+      return candidate;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+  }
+}
+
 // The problem is the browser app needs to read/save the markdown and load images sitting next to it on disk.
-// The way we solve this is a tiny API (/api/session, /api/doc, /files/*) answered before Vite sees the request.
+// The way we solve this is a tiny API (/api/session, /api/doc, /api/upload, /files/*) answered before Vite sees the request.
 // flow: Write tab — user opens app -> loadSession() -> GET /api/session -> handleApi() <-- HERE
 // flow: Write tab — user presses ⌘S -> saveDoc() -> PUT /api/doc -> handleApi() <-- HERE
 // flow: Preview tab — iframe loads ./img.png -> GET /files/* -> handleApi() <-- HERE
+// flow: Write tab — user drops/pastes an image -> uploadImage() -> POST /api/upload -> handleApi() <-- HERE
 async function handleApi(root: string, doc: string | null, req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
   const url = new URL(req.url ?? "/", "http://localhost");
 
@@ -74,6 +105,20 @@ async function handleApi(root: string, doc: string | null, req: http.IncomingMes
         send(res, 404, "not found");
       }
     }
+    return true;
+  }
+
+  if (url.pathname === "/api/upload" && req.method === "POST") {
+    const docDir = url.searchParams.get("dir") ?? "";
+    const name = path.basename(url.searchParams.get("name") ?? "image.png");
+    if (!IMAGE_EXT.has(path.extname(name).toLowerCase())) return send(res, 415, "not an image"), true;
+    const assetsDir = safeResolve(root, path.join(docDir, "assets"));
+    if (!assetsDir) return send(res, 403, "outside root"), true;
+    const body = await readBytes(req, MAX_UPLOAD_BYTES);
+    if (!body) return send(res, 413, "image too large"), true;
+    await fs.mkdir(assetsDir, { recursive: true });
+    const fileName = await writeUnique(assetsDir, name, body);
+    send(res, 201, JSON.stringify({ path: `./assets/${fileName}` }), "application/json");
     return true;
   }
 

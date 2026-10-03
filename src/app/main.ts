@@ -1,11 +1,12 @@
 import { html, render } from "lit-html";
 import type { EditorView } from "codemirror";
-import { parseDoc } from "../core/config.ts";
+import { editFrontMatter, parseDoc, resolveSettings, type DocSettings, type ParsedDoc } from "../core/config.ts";
 import { renderMarkdown } from "../core/markdown.ts";
 import { compose } from "../core/compose.ts";
+import { THEMES, themeById, type Theme } from "../themes/index.ts";
 import { createEditor } from "./editor.ts";
-import { exportPdf, renderPreview } from "./preview.ts";
-import themeCss from "../themes/modern.css?raw";
+import { PreviewPool, type RenderResult } from "./preview.ts";
+import { toolbar } from "./toolbar.ts";
 import sample from "../../examples/welcome.md?raw";
 
 type Tab = "write" | "preview";
@@ -18,18 +19,23 @@ const state = {
   text: "",
   savedText: "",
   tab: "write" as Tab,
-  pages: 0,
   rendering: false,
   error: null as string | null,
-  renderedText: null as string | null,
-  title: "Untitled",
+  parsed: null as ParsedDoc | null,
+  theme: THEMES[0] as Theme,
+  settings: null as DocSettings | null,
+  hoverTheme: null as string | null,
+  htmlFor: (_t: Theme) => "",
 };
 
 const bar = document.getElementById("bar")!;
+const tools = document.getElementById("tools")!;
 const writePane = document.getElementById("write")!;
 const previewPane = document.getElementById("preview")!;
+const pool = new PreviewPool(previewPane);
 let editor: EditorView;
 let renderTimer: number | undefined;
+let generation = 0;
 
 function readDraft(): string | null {
   try {
@@ -46,6 +52,8 @@ function writeDraft(text: string) {
     // Private windows can refuse storage; the draft just won't survive a reload.
   }
 }
+
+const docDir = () => (state.docPath?.includes("/") ? state.docPath.slice(0, state.docPath.lastIndexOf("/")) : "");
 
 // The problem is the app can be launched on a .md file (edit it in place) or on a folder (scratch pad).
 // The way we solve this is to ask the server which doc it was started with and fall back to the last draft or the welcome sample.
@@ -71,31 +79,54 @@ async function saveDoc() {
   const res = await fetch(`/api/doc?path=${encodeURIComponent(state.docPath)}`, { method: "PUT", body: text });
   if (res.ok) state.savedText = text;
   else state.error = `Save failed: ${res.status}`;
-  drawBar();
+  draw();
 }
 
-// The problem is the user wants the paginated PDF view to be ready the instant they flip to Preview.
-// The way we solve this is to re-render in the background shortly after typing stops, skipping work if nothing changed.
+// flow: Write tab — user drops/pastes an image -> insertImages() -> uploadImage() <-- HERE
+async function uploadImage(file: File): Promise<string> {
+  const query = new URLSearchParams({ dir: docDir(), name: file.name });
+  const res = await fetch(`/api/upload?${query}`, { method: "POST", body: file });
+  if (!res.ok) throw new Error(await res.text());
+  return ((await res.json()) as { path: string }).path;
+}
+
+const accentFor = (parsed: ParsedDoc, id: string) => parsed.overrides.colors?.accent ?? themeById(id).defaults.colors.accent;
+
+// The problem is the user wants the paginated view ready the instant they flip to Preview, in whichever theme they pick.
+// The way we solve this is to render the active theme first, then quietly pre-render the other themes while the browser is idle.
 // flow: Write tab — user types -> scheduleRender() -> renderDoc() <-- HERE
-// flow: Preview tab — user presses ⌘↵ -> setTab() -> renderDoc() <-- HERE
+// flow: Preview tab — user changes a toolbar control -> setSetting() -> renderDoc() <-- HERE
 async function renderDoc() {
-  if (state.text === state.renderedText) return;
-  const text = state.text;
-  state.renderedText = text;
-  state.rendering = true;
-  drawBar();
-
+  const gen = ++generation;
   const fileName = state.docPath?.split("/").pop() ?? null;
-  const parsed = parseDoc(text, fileName);
-  const bodyHtml = renderMarkdown(parsed.body, { docPath: state.docPath, typography: parsed.config.typography });
-  state.title = parsed.config.title;
+  const parsed = parseDoc(state.text, fileName);
+  const theme = themeById(parsed.overrides.theme);
+  const bodyHtml = renderMarkdown(parsed.body, { docPath: state.docPath, typography: parsed.overrides.typography ?? true });
+  const htmlFor = (t: Theme) => compose({ bodyHtml, settings: resolveSettings(parsed, t.id, t.defaults), themeCss: t.css });
 
-  const result = await renderPreview(previewPane, (renderId) => compose({ bodyHtml, config: parsed.config, themeCss, renderId }));
-  if (!result) return;
+  Object.assign(state, { parsed, theme, htmlFor, settings: resolveSettings(parsed, theme.id, theme.defaults) });
+  pool.setVars((id) => ({ "--accent": accentFor(parsed, id) }));
+  pool.show(state.hoverTheme ?? theme.id);
+
+  const activeHtml = htmlFor(theme);
+  state.rendering = !pool.isReady(theme.id, activeHtml);
+  draw();
+  const result = await pool.render(theme.id, activeHtml);
+  if (gen !== generation) return;
   state.rendering = false;
-  state.error = "error" in result ? result.error : parsed.error;
-  if ("pages" in result) state.pages = result.pages;
-  drawBar();
+  state.error = result && "error" in result ? result.error : parsed.error;
+  draw();
+  prerenderOthers(gen);
+}
+
+// Understand: sequential and generation-checked, so a burst of typing never stacks up renders of stale text.
+async function prerenderOthers(gen: number) {
+  for (const t of THEMES) {
+    if (t.id === state.theme.id) continue;
+    await new Promise((r) => requestIdleCallback(r, { timeout: 2000 }));
+    if (gen !== generation) return;
+    await pool.render(t.id, state.htmlFor(t));
+  }
 }
 
 function scheduleRender() {
@@ -108,7 +139,39 @@ function onEdit(text: string) {
   state.text = text;
   if (!state.docPath) writeDraft(text);
   scheduleRender();
-  drawBar();
+  draw();
+}
+
+// The problem is toolbar choices must be saved with the document, and the preview must react immediately.
+// The way we solve this is to rewrite just the front matter in the editor (one undoable change) and render without the typing debounce.
+// flow: Preview tab — user changes a toolbar control -> setSetting() <-- HERE
+function setSetting(path: string[], value: unknown) {
+  const edit = editFrontMatter(state.text, path, value);
+  if ("error" in edit) {
+    state.error = edit.error;
+    return draw();
+  }
+  editor.dispatch({ changes: edit });
+  clearTimeout(renderTimer);
+  renderDoc();
+}
+
+// The problem is the user wants to see a theme before committing to it.
+// The way we solve this is to show the hovered theme's cached frame (rendering it now if needed) and fall back to the active one on leave.
+// flow: Preview tab — user hovers a theme chip -> previewTheme() <-- HERE
+function previewTheme(id: string | null) {
+  state.hoverTheme = id;
+  const target = id ?? state.theme.id;
+  pool.show(target);
+  const html = state.htmlFor(themeById(target));
+  if (!pool.isReady(target, html)) pool.render(target, html).then(draw);
+  draw();
+}
+
+// flow: Preview tab — user presses [ or ] -> cycleTheme() <-- HERE
+function cycleTheme(step: number) {
+  const i = THEMES.findIndex((t) => t.id === state.theme.id);
+  setSetting(["theme"], THEMES[(i + step + THEMES.length) % THEMES.length].id);
 }
 
 // The problem is the editor and the page preview each need the full window to be usable.
@@ -124,19 +187,21 @@ function setTab(tab: Tab) {
     clearTimeout(renderTimer);
     renderDoc();
   }
-  drawBar();
+  draw();
 }
 
 const toggleTab = () => setTab(state.tab === "write" ? "preview" : "write");
 
-function statusText(): string {
+function statusText(result: RenderResult | null): string {
   if (state.rendering) return "Paginating…";
-  return state.pages ? `${state.pages} page${state.pages === 1 ? "" : "s"}` : "";
+  return result && "pages" in result ? `${result.pages} page${result.pages === 1 ? "" : "s"}` : "";
 }
 
-// flow: any state change -> drawBar() <-- HERE
-function drawBar() {
+// flow: any state change -> draw() <-- HERE
+function draw() {
   const dirty = state.docPath && state.text !== state.savedText;
+  const shown = state.hoverTheme ?? state.theme.id;
+  const result = pool.resultOf(shown);
   render(
     html`
       <span class="brand">md2pdf</span>
@@ -147,23 +212,31 @@ function drawBar() {
         <button role="tab" aria-selected=${state.tab === "write"} @click=${() => setTab("write")}>Write</button>
         <button role="tab" aria-selected=${state.tab === "preview"} @click=${() => setTab("preview")}>Preview</button>
       </div>
-      <span class="hint">⌘↵ toggle${state.docPath ? " · ⌘S save" : ""}</span>
+      <span class="hint">⌘↵ toggle${state.docPath ? " · ⌘S save" : ""}${state.tab === "preview" ? " · [ ] theme" : ""}</span>
       <span class="spacer"></span>
-      <span class="status ${state.error ? "error" : ""}" title=${state.error ?? ""}>${state.error ?? statusText()}</span>
-      <button class="primary" ?disabled=${!state.pages} @click=${() => exportPdf(previewPane, state.title)}>Export PDF</button>
+      <span class="status ${state.error ? "error" : ""}" title=${state.error ?? ""}>${state.error ?? statusText(result)}</span>
+      <button class="primary" ?disabled=${!result || "error" in result} @click=${() => pool.print(state.settings?.title ?? "document")}>Export PDF</button>
     `,
     bar,
   );
+  if (state.parsed && state.settings) {
+    render(toolbar({ settings: state.settings, overrides: state.parsed.overrides, theme: state.theme, setSetting, previewTheme }), tools);
+  }
 }
 
 // flow: app start — user opens http://localhost:4848 -> main() <-- HERE
 async function main() {
   await loadSession();
-  editor = createEditor(writePane, state.text, { onChange: onEdit, onToggle: toggleTab, onSave: saveDoc });
+  editor = createEditor(writePane, state.text, { onChange: onEdit, onToggle: toggleTab, onSave: saveDoc, uploadImage });
   window.addEventListener("keydown", (e) => {
-    if (e.defaultPrevented || !(e.metaKey || e.ctrlKey)) return;
-    if (e.key === "Enter") (e.preventDefault(), toggleTab());
-    else if (e.key === "s") (e.preventDefault(), saveDoc());
+    if (e.defaultPrevented) return;
+    const typing = e.target instanceof HTMLElement && e.target.closest("input, select, textarea, .cm-editor");
+    if (e.metaKey || e.ctrlKey) {
+      if (e.key === "Enter") (e.preventDefault(), toggleTab());
+      else if (e.key === "s") (e.preventDefault(), saveDoc());
+    } else if (state.tab === "preview" && !typing && (e.key === "[" || e.key === "]")) {
+      cycleTheme(e.key === "]" ? 1 : -1);
+    }
   });
   setTab("write");
   renderDoc();

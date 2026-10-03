@@ -1,0 +1,75 @@
+/* Shared by every theme: print mechanics + neutral defaults. Themes override vars and specifics.
+   Paged.js caveat: never combine `+` with a pseudo-element (e.g. `h1 + p::first-letter`); use p.lead instead. */
+:root {
+  --accent: #0f766e; /* replaced live by the app with the theme or front-matter accent */
+  --text: #1c1917;
+  --muted: #78716c;
+  --rule: #e7e5e4;
+  --code-bg: #f5f5f4;
+  --size-body: 10.5pt;
+  --leading: 1.55;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: var(--leading);
+  color: var(--text);
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+  font-optical-sizing: auto;
+}
+
+p, li, blockquote, figcaption {
+  hyphens: auto;
+  text-wrap: pretty;
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  orphans: 3;
+  widows: 3;
+}
+p { margin: 0 0 0.75em; }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.2;
+  text-wrap: balance;
+  break-after: avoid;
+  break-inside: avoid;
+}
+h1 { font-size: 24pt; margin: 0 0 0.6em; }
+h2 { font-size: 15pt; margin: 1.6em 0 0.5em; }
+h3 { font-size: 12pt; margin: 1.3em 0 0.4em; }
+h4 { font-size: 1em; margin: 1.2em 0 0.3em; }
+
+a { color: var(--accent); text-decoration-thickness: 0.06em; text-underline-offset: 0.15em; }
+strong { font-weight: 700; }
+
+blockquote { margin: 1em 0; padding: 0.1em 0 0.1em 1em; border-left: 3px solid var(--accent); }
+blockquote p:last-child { margin-bottom: 0; }
+
+code, pre { font-family: var(--font-mono); font-size: 0.85em; font-variant-ligatures: none; hyphens: none; }
+code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+pre { background: var(--code-bg); padding: 0.8em 1em; border-radius: 6px; line-height: 1.45; white-space: pre-wrap; break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 1em; }
+
+ul, ol { padding-left: 1.4em; margin: 0 0 0.75em; }
+li { margin: 0.2em 0; }
+li::marker { color: var(--accent); }
+
+table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.92em; break-inside: avoid; }
+th, td { padding: 0.35em 0.6em; font-variant-numeric: lining-nums tabular-nums; }
+th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--text); }
+td { border-bottom: 1px solid var(--rule); }
+
+img { max-width: 100%; height: auto; display: block; margin: 1em auto; break-inside: avoid; }
+figure { margin: 1.4em 0; break-inside: avoid; }
+figure img { margin: 0 auto; }
+figcaption { margin-top: 0.6em; text-align: center; font-size: 0.85em; color: var(--muted); }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+.pagebreak { break-after: page; height: 0; }
+.pagebreak + * { margin-top: 0; }
+
+/* Running header/footer text (Paged.js margin boxes). */
+.pagedjs_margin-content { font-family: var(--font-heading); font-size: 8pt; color: var(--muted); letter-spacing: 0.02em; }

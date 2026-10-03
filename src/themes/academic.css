@@ -1,0 +1,21 @@
+/* Academic — paper look: numbered sections, booktabs tables, numbered figures. */
+:root { --size-body: 11.5pt; --leading: 1.4; --text: #111; --muted: #555; }
+body { text-align: justify; counter-reset: h2 figure table; }
+p { margin: 0 0 0.6em; }
+h1 { font-size: 20pt; font-weight: 700; text-align: center; margin: 0 0 1em; }
+p.lead { text-align: center; font-style: italic; color: var(--muted); margin-bottom: 1.5em; }
+h2 { font-size: 13pt; font-weight: 700; counter-increment: h2; counter-reset: h3; }
+h2::before { content: counter(h2) "\2003"; }
+h3 { font-size: 11.5pt; font-weight: 700; counter-increment: h3; }
+h3::before { content: counter(h2) "." counter(h3) "\2003"; }
+blockquote { border: 0; padding: 0 2.5em; font-size: 0.95em; }
+code { background: none; padding: 0; }
+pre { background: none; border-left: 2px solid var(--rule); border-radius: 0; }
+table { counter-increment: table; border-top: 1.5px solid var(--text); border-bottom: 1.5px solid var(--text); }
+th { border-bottom: 0.75px solid var(--text); }
+td { border: 0; }
+figure { counter-increment: figure; }
+figcaption { text-align: left; color: var(--text); font-size: 0.9em; }
+figcaption::before { content: "Figure " counter(figure) ". "; font-weight: 700; }
+ul, ol, figure, pre { text-align: left; }
+.pagedjs_margin-content { font-family: var(--font-body); font-size: 10pt; color: var(--text); }

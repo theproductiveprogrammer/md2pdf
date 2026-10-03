@@ -86,4 +86,48 @@ body:not([data-tab="preview"]) #preview { visibility: hidden; }
 
 #preview { background: var(--desk); }
 #preview iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-#preview iframe.pending { visibility: hidden; }
+/* Only the shown theme's frame inherits the pane's visibility; the rest stay laid out but invisible. */
+#preview iframe:not(.shown) { visibility: hidden; }
+
+#tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+body:not([data-tab="preview"]) #tools { display: none; }
+.sep { width: 1px; height: 20px; background: var(--line); }
+.themes { display: flex; gap: 4px; }
+.chip {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 11px 4px 9px;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--chip); }
+.chip:hover { border-color: var(--muted); }
+.chip[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+.field { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.field select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 6px;
+  max-width: 190px;
+}
+.field input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 0 2px; }
+.check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.check input { accent-color: var(--accent); margin: 0; }
