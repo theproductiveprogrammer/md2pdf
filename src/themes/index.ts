@@ -25,7 +25,7 @@ export const THEMES: Theme[] = [
       page: { margin: "20mm 18mm" },
       footer: { center: "{page} / {pages}" },
       fonts: { body: "Source Serif 4", heading: "Inter", mono: "JetBrains Mono" },
-      colors: { accent: "#0f766e" },
+      colors: { text: "#1c1917", muted: "#78716c", quote: "#44403c", accent: "#0f766e" },
     },
   },
   {
@@ -37,7 +37,7 @@ export const THEMES: Theme[] = [
       header: { center: "{title}", skipFirst: true },
       footer: { center: "{page}" },
       fonts: { body: "EB Garamond", heading: "EB Garamond", mono: "IBM Plex Mono" },
-      colors: { accent: "#7f1d1d" },
+      colors: { text: "#1a1714", muted: "#6b635b", quote: "#3a332d", accent: "#7f1d1d" },
     },
   },
   {
@@ -48,7 +48,7 @@ export const THEMES: Theme[] = [
       page: { margin: "25mm" },
       footer: { center: "{page}" },
       fonts: { body: "Crimson Pro", heading: "Crimson Pro", mono: "IBM Plex Mono" },
-      colors: { accent: "#1e3a8a" },
+      colors: { text: "#111111", muted: "#555555", quote: "#333333", accent: "#1e3a8a" },
     },
   },
   {
@@ -59,7 +59,7 @@ export const THEMES: Theme[] = [
       page: { margin: "24mm 22mm" },
       footer: { right: "{page}" },
       fonts: { body: "Inter", heading: "Inter", mono: "IBM Plex Mono" },
-      colors: { accent: "#171717" },
+      colors: { text: "#171717", muted: "#737373", quote: "#737373", accent: "#171717" },
     },
   },
   {
@@ -70,7 +70,7 @@ export const THEMES: Theme[] = [
       page: { margin: "18mm 16mm" },
       footer: { center: "{page} / {pages}" },
       fonts: { body: "System", heading: "System", mono: "System Mono" },
-      colors: { accent: "#0969da" },
+      colors: { text: "#1f2328", muted: "#59636e", quote: "#59636e", accent: "#0969da" },
     },
   },
   {
@@ -81,7 +81,7 @@ export const THEMES: Theme[] = [
       page: { margin: "14mm 16mm" },
       footer: false,
       fonts: { body: "IBM Plex Sans", heading: "IBM Plex Sans", mono: "IBM Plex Mono" },
-      colors: { accent: "#1d4ed8" },
+      colors: { text: "#1e293b", muted: "#64748b", quote: "#475569", accent: "#1d4ed8" },
     },
   },
 ];

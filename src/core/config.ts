@@ -7,6 +7,15 @@ export interface Slots {
   skipFirst?: boolean;
 }
 
+// Text: body + headings. Muted: captions, header/footer, labels. Quote: blockquotes. Accent: headings, links, table heads.
+// Rules, code backgrounds and table stripes are mixed from these in base.css, so a palette recolours everything.
+export interface Colors {
+  text: string;
+  muted: string;
+  quote: string;
+  accent: string;
+}
+
 export interface DocSettings {
   title: string;
   author: string;
@@ -19,8 +28,7 @@ export interface DocSettings {
   breakBeforeH1: boolean;
   typography: boolean;
   fonts: { body: string; heading: string; mono: string };
-  // text/muted are optional: when unset, the theme's own CSS colours apply.
-  colors: { accent: string; text?: string; muted?: string };
+  colors: Colors;
 }
 
 // What a theme may preset; front matter always wins over these.
@@ -30,7 +38,7 @@ export interface ThemeDefaults {
   footer?: Slots | false;
   breakBeforeH1?: boolean;
   fonts: DocSettings["fonts"];
-  colors: { accent: string };
+  colors: Colors;
 }
 
 // Only the keys the user actually wrote in front matter.
@@ -109,7 +117,7 @@ export function parseDoc(source: string, fileName: string | null): ParsedDoc {
       breakBeforeH1: typeof meta.breakBeforeH1 === "boolean" ? meta.breakBeforeH1 : undefined,
       typography: typeof meta.typography === "boolean" ? meta.typography : undefined,
       fonts: pick(meta.fonts, ["body", "heading", "mono"]),
-      colors: pick(meta.colors, ["accent", "text", "muted"]),
+      colors: pick(meta.colors, ["text", "muted", "quote", "accent"]),
     },
   };
 }

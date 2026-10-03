@@ -1,5 +1,5 @@
 import { html, nothing } from "lit-html";
-import type { DocSettings, Overrides, Slots } from "../core/config.ts";
+import type { Colors, DocSettings, Overrides, Slots } from "../core/config.ts";
 import { FONTS, googleFontsUrl, type FontKind } from "../core/fonts.ts";
 import { PALETTES, paletteMatches } from "../core/palettes.ts";
 import { THEMES, type Theme } from "../themes/index.ts";
@@ -132,13 +132,20 @@ function fontPicker(p: ToolbarProps) {
   `;
 }
 
-const dots = (text: string, muted: string, accent: string) => html`
-  <span class="dots"><i style="background:${text}"></i><i style="background:${muted}"></i><i style="background:${accent}"></i></span>
+const dots = (c: Colors) => html`
+  <span class="dots">${[c.text, c.muted, c.quote, c.accent].map((v) => html`<i style="background:${v}"></i>`)}</span>
 `;
 
-// The problem is picking three colours that work together is fiddly; most people want a tasteful preset.
-// The way we solve this is preset text/secondary/accent palettes, plus a custom accent; all apply live without re-pagination.
-// flow: Preview tab — user opens Colours and picks a palette -> colourPicker() -> setSetting(colors) <-- HERE
+const COLOUR_FIELDS: [keyof Colors, string][] = [
+  ["text", "Text"],
+  ["muted", "Secondary"],
+  ["quote", "Quote"],
+  ["accent", "Accent"],
+];
+
+// The problem is picking colours that work together is fiddly; most people want a tasteful preset, then maybe one tweak.
+// The way we solve this is preset text/secondary/quote/accent palettes plus a picker per colour; all apply live without re-pagination.
+// flow: Preview tab — user opens Colours and picks a palette or a colour -> colourPicker() -> setSetting(colors) <-- HERE
 function colourPicker(p: ToolbarProps) {
   const c = p.overrides.colors;
   const s = p.settings;
@@ -146,29 +153,40 @@ function colourPicker(p: ToolbarProps) {
   return html`
     <div class="pop-wrap">
       <button class="pop-trigger" aria-expanded=${p.popover === "colors"} @click=${() => p.setPopover(p.popover === "colors" ? null : "colors")}>
-        ${dots(s.colors.text ?? "#1c1917", s.colors.muted ?? "#78716c", s.colors.accent)} Colours <span class="caret">▾</span>
+        ${dots(s.colors)} Colours <span class="caret">▾</span>
       </button>
       ${p.popover === "colors"
         ? html`
             <div class="pop colors-pop" role="dialog" aria-label="Colours">
               <div class="palette-grid">
-                <button class="palette" aria-pressed=${fromTheme} title="Theme colours" @click=${() => p.setSetting(["colors"], undefined)}>
-                  ${dots("#1c1917", "#78716c", p.theme.defaults.colors.accent)}
+                <button class="palette" aria-pressed=${fromTheme} title="${p.theme.name} theme colours" @click=${() => p.setSetting(["colors"], undefined)}>
+                  ${dots(p.theme.defaults.colors)}
                   <span>Theme</span>
                 </button>
                 ${PALETTES.map(
                   (pal) => html`
-                    <button class="palette" aria-pressed=${paletteMatches(pal, c)} title=${pal.name} @click=${() => p.setSetting(["colors"], { text: pal.text, muted: pal.muted, accent: pal.accent })}>
-                      ${dots(pal.text, pal.muted, pal.accent)}
+                    <button
+                      class="palette"
+                      aria-pressed=${paletteMatches(pal, c)}
+                      title=${pal.name}
+                      @click=${() => p.setSetting(["colors"], { text: pal.text, muted: pal.muted, quote: pal.quote, accent: pal.accent })}
+                    >
+                      ${dots(pal)}
                       <span>${pal.name}</span>
                     </button>
                   `,
                 )}
               </div>
-              <label class="field custom-accent">
-                <span>Custom accent</span>
-                <input type="color" .value=${s.colors.accent} @input=${(e: Event) => p.setSetting(["colors", "accent"], (e.target as HTMLInputElement).value)} />
-              </label>
+              <div class="colour-fields">
+                ${COLOUR_FIELDS.map(
+                  ([key, label]) => html`
+                    <label class="colour-field">
+                      <input type="color" .value=${s.colors[key]} @input=${(e: Event) => p.setSetting(["colors", key], (e.target as HTMLInputElement).value)} />
+                      <span>${label}</span>
+                    </label>
+                  `,
+                )}
+              </div>
             </div>
           `
         : nothing}

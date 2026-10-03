@@ -1,5 +1,5 @@
 /* Classic — book typography: Garamond, justified, indented paragraphs, drop cap. */
-:root { --size-body: 11.5pt; --leading: 1.45; --text: #1a1714; --muted: #6b635b; }
+:root { --size-body: 11.5pt; --leading: 1.45; }
 body { text-align: justify; }
 p { margin: 0; }
 p + p { text-indent: 1.5em; }

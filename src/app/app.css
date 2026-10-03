@@ -257,9 +257,10 @@ body:not([data-tab="preview"]) #tools { display: none; }
   font: inherit;
   font-size: 11px;
 }
-.palette .dots i { width: 20px; height: 20px; margin-left: -7px; }
+.palette .dots i { width: 18px; height: 18px; margin-left: -7px; }
 .palette .dots i:first-child { margin-left: 0; }
 .palette:hover { border-color: var(--muted); }
 .palette[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--text); }
-.custom-accent { margin-top: 12px; }
-.custom-accent input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.colour-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.colour-field { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; }
+.colour-field input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }

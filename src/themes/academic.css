@@ -1,5 +1,5 @@
 /* Academic — paper look: numbered sections, booktabs tables, numbered figures. */
-:root { --size-body: 11.5pt; --leading: 1.4; --text: #111; --muted: #555; }
+:root { --size-body: 11.5pt; --leading: 1.4; }
 body { text-align: justify; counter-reset: h2 figure table; }
 p { margin: 0 0 0.6em; }
 h1 { font-size: 20pt; font-weight: 700; text-align: center; margin: 0 0 1em; }

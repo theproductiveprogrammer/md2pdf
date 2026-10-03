@@ -1,5 +1,5 @@
 /* Minimal — one sans family, quiet hierarchy, lots of air. */
-:root { --size-body: 10pt; --leading: 1.65; --text: #171717; --muted: #737373; --rule: #e5e5e5; --code-bg: #f5f5f5; }
+:root { --size-body: 10pt; --leading: 1.65; --rule: color-mix(in srgb, var(--text) 10%, white); --code-bg: color-mix(in srgb, var(--text) 4%, white); }
 p, li { font-variant-numeric: proportional-nums; }
 h1 { font-size: 22pt; font-weight: 600; letter-spacing: -0.025em; margin-bottom: 1.2em; }
 h2 { font-size: 12.5pt; font-weight: 600; letter-spacing: -0.01em; margin-top: 2.2em; }

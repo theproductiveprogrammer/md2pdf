@@ -1,5 +1,5 @@
 /* Resume — compact one-pager: big name, ruled section labels, tight lists. */
-:root { --size-body: 9.5pt; --leading: 1.45; --text: #1e293b; --muted: #64748b; --rule: #cbd5e1; }
+:root { --size-body: 9.5pt; --leading: 1.45; --rule: color-mix(in srgb, var(--muted) 35%, white); }
 p, li { hyphens: manual; font-variant-numeric: lining-nums; }
 p { margin: 0 0 0.45em; }
 h1 { font-size: 24pt; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.15em; }

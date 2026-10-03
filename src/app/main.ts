@@ -98,12 +98,11 @@ async function uploadImage(file: File): Promise<string> {
   return ((await res.json()) as { path: string }).path;
 }
 
-// Understand: an empty string removes the variable, so the theme's own CSS colour comes back.
-const colourVars = (parsed: ParsedDoc, id: string) => ({
-  "--accent": parsed.overrides.colors?.accent ?? themeById(id).defaults.colors.accent,
-  "--text": parsed.overrides.colors?.text ?? "",
-  "--muted": parsed.overrides.colors?.muted ?? "",
-});
+// The palette for a given theme frame: the theme's own colours, with any front-matter colours on top.
+const colourVars = (parsed: ParsedDoc, id: string) => {
+  const c = { ...themeById(id).defaults.colors, ...parsed.overrides.colors };
+  return { "--text": c.text, "--muted": c.muted, "--quote": c.quote, "--accent": c.accent };
+};
 
 // The problem is the Document form and toolbar must reflect the YAML the moment it changes, not after the render debounce.
 // The way we solve this is to re-parse the front matter synchronously on every edit (cheap) and resolve settings for the active theme.

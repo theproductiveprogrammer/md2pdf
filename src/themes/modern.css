@@ -4,6 +4,6 @@ h1 { font-weight: 700; letter-spacing: -0.02em; }
 h2 { font-weight: 650; color: var(--accent); }
 h3 { font-weight: 600; }
 h4 { font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-size: 0.9em; }
-th { font-family: var(--font-heading); background: color-mix(in srgb, var(--accent) 9%, white); border-bottom: 1.5px solid var(--accent); }
-tbody tr:nth-child(even) td { background: #fafaf9; }
-blockquote { font-style: italic; color: #44403c; }
+th { font-family: var(--font-heading); background: var(--head-bg); border-bottom: 1.5px solid var(--accent); }
+tbody tr:nth-child(even) td { background: var(--stripe); }
+blockquote { font-style: italic; }
