@@ -1,0 +1,89 @@
+:root {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --desk: #e7e5e4;
+  --text: #1c1917;
+  --muted: #78716c;
+  --line: #e7e5e4;
+  --accent: #0f766e;
+  --danger: #b91c1c;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --surface: #232120;
+    --desk: #2e2b29;
+    --text: #e7e5e4;
+    --muted: #a8a29e;
+    --line: #3a3634;
+    --accent: #2dd4bf;
+    --danger: #f87171;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+
+#bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.brand { font-weight: 700; letter-spacing: -0.01em; }
+.file { color: var(--muted); max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dirty { color: var(--accent); margin-left: 4px; }
+.spacer { flex: 1; }
+.hint { color: var(--muted); font-size: 12px; }
+.status { color: var(--muted); font-variant-numeric: tabular-nums; }
+.status.error { color: var(--danger); }
+
+.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 14px;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+
+.primary {
+  border: 0;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font: inherit;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.primary:disabled { opacity: 0.5; cursor: default; }
+
+main { flex: 1; min-height: 0; position: relative; }
+.pane { position: absolute; inset: 0; }
+/* Inactive pane stays laid out (Paged.js needs real geometry), just invisible. */
+body:not([data-tab="write"]) #write,
+body:not([data-tab="preview"]) #preview { visibility: hidden; }
+
+#write { background: var(--surface); overflow: hidden; }
+#write .cm-editor { height: 100%; font-size: 14px; }
+#write .cm-scroller { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; line-height: 1.6; }
+#write .cm-content { max-width: 80ch; margin: 0 auto; padding: 32px 16px 50vh; }
+#write .cm-focused { outline: none; }
+
+#preview { background: var(--desk); }
+#preview iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+#preview iframe.pending { visibility: hidden; }
