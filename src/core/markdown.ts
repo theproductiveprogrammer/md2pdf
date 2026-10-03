@@ -81,6 +81,26 @@ function leadParagraphPlugin(md: Md) {
   });
 }
 
+const KEEP_TOGETHER_MAX_ROWS = 8;
+
+// The problem is a long table that won't fit in the space left on a page jumps whole to the next page, leaving a near-empty page behind.
+// The way we solve this is to let tables split between rows by default, and only mark short tables (≤ 8 rows) to stay in one piece.
+// flow: Preview tab — user switches to Preview -> renderMarkdown() -> tableKeepPlugin <-- HERE
+function tableKeepPlugin(md: Md) {
+  md.core.ruler.push("table_keep", (state) => {
+    let open: (typeof state.tokens)[number] | null = null;
+    let rows = 0;
+    for (const t of state.tokens) {
+      if (t.type === "table_open") (open = t), (rows = 0);
+      else if (t.type === "tr_open") rows++;
+      else if (t.type === "table_close" && open) {
+        if (rows - 1 <= KEEP_TOGETHER_MAX_ROWS) open.attrJoin("class", "keep-together");
+        open = null;
+      }
+    }
+  });
+}
+
 // The problem is turning the user's markdown into print-ready HTML with smart typography, page breaks and working images.
 // The way we solve this is markdown-it with typographer on, plus our pagebreak, typography, figure and image-path plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
@@ -92,6 +112,7 @@ export function renderMarkdown(body: string, opts: { docPath: string | null; typ
     .use(typographyPlugin)
     .use(figurePlugin)
     .use(leadParagraphPlugin)
+    .use(tableKeepPlugin)
     .use(resolveImagesPlugin, docDir);
   return md.render(body);
 }

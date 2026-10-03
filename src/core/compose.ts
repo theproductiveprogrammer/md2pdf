@@ -95,6 +95,70 @@ ${fonts}
   window.addEventListener("error", (e) => parent.postMessage({ type: "md2pdf:error", message: String(e.message) }, "*"));
 </script>
 <script src="/vendor/paged.polyfill.js"></script>
+<script>
+  // Split tables: (1) size columns once from the WHOLE table and pin those widths on every fragment, so
+  // columns line up across pages and no cell is sized for only the rows that happened to land on page 1;
+  // (2) repeat the header row on each continuation page. Both run during layout, so their height counts
+  // when Paged.js decides how many rows fit. Refs are stripped from copies so Paged.js never mistakes them
+  // for the originals.
+  const stripRefs = (el) => { for (const e of [el, ...el.querySelectorAll("[data-ref]")]) e.removeAttribute("data-ref"); return el; };
+
+  // Column widths: each column gets its min-content (longest word), then the spare width is shared in
+  // proportion to how much more each column wants (max-content - min-content). Long prose columns get the
+  // room; short code/number columns stay tight. Measured on a hidden copy of the whole table.
+  function columnGroup(sourceTable, host) {
+    const available = host.getBoundingClientRect().width;
+    const measure = (width) => {
+      const probe = stripRefs(sourceTable.cloneNode(true));
+      probe.style.cssText = "position:absolute; visibility:hidden; left:0; top:0; table-layout:auto; width:" + width;
+      host.parentNode.appendChild(probe);
+      const widths = [...(probe.querySelector("tr")?.children ?? [])].map((c) => c.getBoundingClientRect().width);
+      probe.remove();
+      return widths;
+    };
+    const min = measure("min-content");
+    const max = measure("max-content");
+    const minTotal = min.reduce((a, b) => a + b, 0);
+    const maxTotal = max.reduce((a, b) => a + b, 0);
+    const want = max.map((m, i) => Math.max(0, m - min[i]));
+    const wantTotal = want.reduce((a, b) => a + b, 0) || 1;
+    const widths = maxTotal <= available
+      ? max.map((m) => m + (available - maxTotal) / max.length)
+      : min.map((m, i) => m + Math.max(0, available - minTotal) * (want[i] / wantTotal));
+    const sum = widths.reduce((a, b) => a + b, 0) || 1;
+    const group = document.createElement("colgroup");
+    for (const w of widths) {
+      const col = document.createElement("col");
+      col.style.width = (w / sum) * 100 + "%";
+      group.appendChild(col);
+    }
+    return group;
+  }
+
+  Paged.registerHandlers(class extends Paged.Handler {
+    renderNode(clone, node) {
+      if (clone.nodeType !== 1) return;
+
+      if (clone.tagName === "TABLE" && !clone.hasAttribute("data-split-from")) {
+        clone.style.tableLayout = "fixed";
+        clone.insertBefore(columnGroup(node, clone), clone.firstChild);
+        return;
+      }
+
+      if (clone.tagName !== "TR" || node.parentElement?.tagName === "THEAD") return;
+      const table = clone.closest("table");
+      if (!table?.hasAttribute("data-split-from") || table.querySelector(":scope > thead")) return;
+      const first = document.querySelector('table[data-ref="' + table.dataset.splitFrom + '"]:not([data-split-from])');
+      const group = first?.querySelector(":scope > colgroup");
+      if (group) {
+        table.style.tableLayout = "fixed";
+        table.insertBefore(group.cloneNode(true), table.firstChild);
+      }
+      const sourceHead = node.closest("table")?.querySelector(":scope > thead");
+      if (sourceHead) table.insertBefore(stripRefs(sourceHead.cloneNode(true)), group ? table.children[1] : table.firstChild);
+    }
+  });
+</script>
 </head>
 <body>
 ${bodyHtml}

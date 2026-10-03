@@ -5,6 +5,7 @@ import classic from "./classic.css?raw";
 import academic from "./academic.css?raw";
 import minimal from "./minimal.css?raw";
 import resume from "./resume.css?raw";
+import github from "./github.css?raw";
 
 export interface Theme {
   id: string;
@@ -59,6 +60,17 @@ export const THEMES: Theme[] = [
       footer: { right: "{page}" },
       fonts: { body: "Inter", heading: "Inter", mono: "IBM Plex Mono" },
       colors: { accent: "#171717" },
+    },
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    css: base + github,
+    defaults: {
+      page: { margin: "18mm 16mm" },
+      footer: { center: "{page} / {pages}" },
+      fonts: { body: "System", heading: "System", mono: "System Mono" },
+      colors: { accent: "#0969da" },
     },
   },
   {

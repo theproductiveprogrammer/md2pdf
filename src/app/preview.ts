@@ -59,7 +59,7 @@ export class PreviewPool {
         const old = s.frame;
         Object.assign(s, { frame, html, result, pending: null });
         this.applyVarsTo(id, frame);
-        if (this.shownId === id) this.reveal(frame, old);
+        if (this.shownId === id) this.reveal(frame);
         old?.remove();
         resolve(result);
       };
@@ -72,24 +72,24 @@ export class PreviewPool {
   }
 
   // flow: Preview tab — user clicks/hovers a theme chip -> pool.show() <-- HERE
+  // Understand: if the theme's frame isn't rendered yet, the current frame stays up until it is (render() reveals it on arrival).
   show(id: string) {
-    const prev = this.shownId ? this.slots.get(this.shownId)?.frame ?? null : null;
     this.shownId = id;
     const next = this.slots.get(id)?.frame;
-    if (next) this.reveal(next, prev);
+    if (next) this.reveal(next);
   }
 
-  // Understand: keeps the reader at the same relative spot in the document when swapping themes with different page counts.
-  private reveal(next: HTMLIFrameElement, prev: HTMLIFrameElement | null) {
-    if (prev && prev !== next) {
-      const p = prev.contentWindow;
-      const n = next.contentWindow;
-      if (p && n) {
-        const ratio = p.scrollY / Math.max(1, p.document.documentElement.scrollHeight - p.innerHeight);
-        n.scrollTo(0, ratio * (n.document.documentElement.scrollHeight - n.innerHeight));
-      }
-      prev.classList.remove("shown");
+  // The problem is exactly one frame may be visible — two stacked frames show the wrong theme and Export prints the wrong one.
+  // The way we solve this is to hide every other frame on each reveal, carrying the reader's relative scroll position across.
+  private reveal(next: HTMLIFrameElement) {
+    const prev = this.host.querySelector<HTMLIFrameElement>("iframe.shown");
+    const p = prev?.contentWindow;
+    const n = next.contentWindow;
+    if (prev && prev !== next && p && n) {
+      const ratio = p.scrollY / Math.max(1, p.document.documentElement.scrollHeight - p.innerHeight);
+      n.scrollTo(0, ratio * (n.document.documentElement.scrollHeight - n.innerHeight));
     }
+    for (const f of this.host.querySelectorAll("iframe.shown")) if (f !== next) f.classList.remove("shown");
     next.classList.add("shown");
   }
 

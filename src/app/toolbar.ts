@@ -11,7 +11,7 @@ export interface ToolbarProps {
   previewTheme: (id: string | null) => void;
 }
 
-const SIZES = ["A4", "Letter", "A5", "Legal"];
+const SIZES = ["A4", "A4 landscape", "Letter", "Letter landscape", "A5", "Legal"];
 const MARGINS: [string, string][] = [
   ["Narrow", "12mm"],
   ["Normal", "20mm"],
