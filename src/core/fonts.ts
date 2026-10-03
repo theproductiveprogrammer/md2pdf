@@ -3,26 +3,39 @@ export type FontKind = "serif" | "sans" | "mono";
 export interface Font {
   name: string;
   kind: FontKind;
+  blurb: string;
   // Locally installed fonts addressed by CSS keyword stacks rather than downloaded from Google.
   stack?: string;
 }
 
-// Curated Google Fonts (each verified to serve 400/600/700 + italics, so no faux bold), plus the OS system fonts.
+// Google Fonts plus the OS system fonts. Google silently skips weights a family lacks (e.g. Lato has no 600),
+// so one weight request fits all; the browser falls back to the nearest weight.
 export const FONTS: Font[] = [
-  { name: "Source Serif 4", kind: "serif" },
-  { name: "EB Garamond", kind: "serif" },
-  { name: "Crimson Pro", kind: "serif" },
-  { name: "Lora", kind: "serif" },
-  { name: "Merriweather", kind: "serif" },
-  { name: "Playfair Display", kind: "serif" },
-  { name: "Inter", kind: "sans" },
-  { name: "IBM Plex Sans", kind: "sans" },
-  { name: "Work Sans", kind: "sans" },
-  { name: "Fira Sans", kind: "sans" },
-  { name: "System", kind: "sans", stack: 'system-ui, -apple-system, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' },
-  { name: "JetBrains Mono", kind: "mono" },
-  { name: "IBM Plex Mono", kind: "mono" },
-  { name: "System Mono", kind: "mono", stack: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace' },
+  { name: "Source Serif 4", kind: "serif", blurb: "Editorial body serif" },
+  { name: "Libre Baskerville", kind: "serif", blurb: "Serif for papers & notes" },
+  { name: "Playfair Display", kind: "serif", blurb: "Magazine-style headings" },
+  { name: "Merriweather", kind: "serif", blurb: "Sturdy serif for long reads" },
+  { name: "PT Serif", kind: "serif", blurb: "Plain, dependable serif" },
+  { name: "Crimson Text", kind: "serif", blurb: "Old-style book serif" },
+  { name: "Crimson Pro", kind: "serif", blurb: "Contemporary book serif" },
+  { name: "EB Garamond", kind: "serif", blurb: "Renaissance book face" },
+  { name: "Lora", kind: "serif", blurb: "Calligraphic, warm serif" },
+  { name: "Roboto", kind: "sans", blurb: "Familiar README look" },
+  { name: "Inter", kind: "sans", blurb: "Crisp, neutral UI sans" },
+  { name: "Open Sans", kind: "sans", blurb: "Friendly and highly legible" },
+  { name: "Lato", kind: "sans", blurb: "Friendly neutral sans" },
+  { name: "Montserrat", kind: "sans", blurb: "Sans-serif for business docs" },
+  { name: "Raleway", kind: "sans", blurb: "Elegant, light-stroked sans" },
+  { name: "Poppins", kind: "sans", blurb: "Rounded geometric sans" },
+  { name: "IBM Plex Sans", kind: "sans", blurb: "High-contrast modern look" },
+  { name: "Work Sans", kind: "sans", blurb: "Grotesque for reports" },
+  { name: "Fira Sans", kind: "sans", blurb: "Warm humanist sans" },
+  { name: "System", kind: "sans", blurb: "Your operating system's font", stack: 'system-ui, -apple-system, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' },
+  { name: "JetBrains Mono", kind: "mono", blurb: "Code-first monospace" },
+  { name: "IBM Plex Mono", kind: "mono", blurb: "Corporate monospace" },
+  { name: "Inconsolata", kind: "mono", blurb: "Clean, compact monospace" },
+  { name: "Space Mono", kind: "mono", blurb: "Retro geometric monospace" },
+  { name: "System Mono", kind: "mono", blurb: "Your operating system's monospace", stack: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace' },
 ];
 
 const FALLBACK: Record<FontKind, string> = {
@@ -39,9 +52,9 @@ export function fontStack(name: string, slot: FontKind): string {
   return `"${name.replace(/"/g, "")}", ${FALLBACK[font?.kind ?? slot]}`;
 }
 
-// Understand: one <link> per family, so a single unavailable font can't 400 the whole request and take the others down with it.
-export function googleFontsUrl(name: string): string | null {
+// Understand: one <link> per family, so a single unavailable font can't fail the whole request and take the others down with it.
+export function googleFontsUrl(name: string, weights = "ital,wght@0,400;0,600;0,700;1,400;1,700"): string | null {
   const font = FONTS.find((f) => f.name === name);
   if (!font || font.stack) return null;
-  return `https://fonts.googleapis.com/css2?family=${name.replace(/ /g, "+")}:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap`;
+  return `https://fonts.googleapis.com/css2?family=${name.replace(/ /g, "+")}:${weights}&display=swap`;
 }

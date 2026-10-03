@@ -19,7 +19,8 @@ export interface DocSettings {
   breakBeforeH1: boolean;
   typography: boolean;
   fonts: { body: string; heading: string; mono: string };
-  colors: { accent: string };
+  // text/muted are optional: when unset, the theme's own CSS colours apply.
+  colors: { accent: string; text?: string; muted?: string };
 }
 
 // What a theme may preset; front matter always wins over these.
@@ -29,7 +30,7 @@ export interface ThemeDefaults {
   footer?: Slots | false;
   breakBeforeH1?: boolean;
   fonts: DocSettings["fonts"];
-  colors: DocSettings["colors"];
+  colors: { accent: string };
 }
 
 // Only the keys the user actually wrote in front matter.
@@ -108,7 +109,7 @@ export function parseDoc(source: string, fileName: string | null): ParsedDoc {
       breakBeforeH1: typeof meta.breakBeforeH1 === "boolean" ? meta.breakBeforeH1 : undefined,
       typography: typeof meta.typography === "boolean" ? meta.typography : undefined,
       fonts: pick(meta.fonts, ["body", "heading", "mono"]),
-      colors: pick(meta.colors, ["accent"]),
+      colors: pick(meta.colors, ["accent", "text", "muted"]),
     },
   };
 }

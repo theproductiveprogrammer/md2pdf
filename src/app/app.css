@@ -27,7 +27,7 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-body { display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--text); overflow: hidden; }
 
 #bar {
   display: flex;
@@ -176,3 +176,90 @@ body:not([data-tab="preview"]) #tools { display: none; }
   .slot-grid { grid-template-columns: 1fr 1fr 1fr; }
   .row-label, .slot-grid .check { grid-column: 1 / -1; }
 }
+
+/* Typeface + colour pickers (Preview toolbar). */
+.pop-wrap { position: relative; }
+.pop-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 3px 9px;
+  cursor: pointer;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pop-trigger[aria-expanded="true"] { border-color: var(--accent); }
+.pop-trigger .aa { font-size: 15px; line-height: 1; }
+.caret { color: var(--muted); font-size: 10px; }
+.pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.16);
+  padding: 12px;
+}
+.fonts-pop { width: min(380px, calc(100vw - 32px)); }
+.seg { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); margin-bottom: 10px; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; padding: 4px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); font-weight: 600; }
+.filters { display: flex; gap: 4px; margin-bottom: 8px; }
+.filter { border: 1px solid var(--line); background: var(--bg); color: var(--muted); font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 999px; cursor: pointer; }
+.filter[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+.font-list { display: flex; flex-direction: column; gap: 6px; max-height: min(420px, 60vh); overflow: auto; padding-right: 2px; }
+.font-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name aa" "blurb aa";
+  align-items: center;
+  text-align: left;
+  gap: 1px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+.font-card:hover { border-color: var(--muted); }
+.font-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.font-name { grid-area: name; font-size: 16px; }
+.font-blurb { grid-area: blurb; font-size: 11px; color: var(--muted); }
+.font-aa { grid-area: aa; font-size: 18px; color: var(--muted); }
+.theme-default .font-name { font-size: 14px; font-weight: 600; }
+.dots { display: inline-flex; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--surface); margin-left: -5px; }
+.dots i:first-child { margin-left: 0; }
+.colors-pop { width: min(330px, calc(100vw - 32px)); }
+.palette-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.palette {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 8px 4px 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.palette .dots i { width: 20px; height: 20px; margin-left: -7px; }
+.palette .dots i:first-child { margin-left: 0; }
+.palette:hover { border-color: var(--muted); }
+.palette[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--text); }
+.custom-accent { margin-top: 12px; }
+.custom-accent input[type="color"] { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }

@@ -45,7 +45,7 @@ export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCs
   const header = marginBoxes("top", settings.header, settings);
   const footer = marginBoxes("bottom", settings.footer, settings);
   const fonts = [...new Set([settings.fonts.body, settings.fonts.heading, settings.fonts.mono])]
-    .map(googleFontsUrl)
+    .map((name) => googleFontsUrl(name))
     .filter((url): url is string => !!url)
     .map((url) => `<link rel="stylesheet" href="${url}" data-pagedjs-ignore>`)
     .join("\n");

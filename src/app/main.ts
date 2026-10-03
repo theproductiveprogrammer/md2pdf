@@ -6,7 +6,7 @@ import { compose } from "../core/compose.ts";
 import { THEMES, themeById, type Theme } from "../themes/index.ts";
 import { createEditor } from "./editor.ts";
 import { PreviewPool, type RenderResult } from "./preview.ts";
-import { toolbar } from "./toolbar.ts";
+import { toolbar, type FontFilter, type FontTarget, type Popover } from "./toolbar.ts";
 import { details } from "./details.ts";
 import sample from "../../examples/welcome.md?raw";
 
@@ -28,6 +28,9 @@ const state = {
   settings: null as DocSettings | null,
   hoverTheme: null as string | null,
   detailsOpen: true,
+  popover: null as Popover,
+  fontTarget: "both" as FontTarget,
+  fontFilter: "all" as FontFilter,
   htmlFor: (_t: Theme) => "",
 };
 
@@ -95,7 +98,12 @@ async function uploadImage(file: File): Promise<string> {
   return ((await res.json()) as { path: string }).path;
 }
 
-const accentFor = (parsed: ParsedDoc, id: string) => parsed.overrides.colors?.accent ?? themeById(id).defaults.colors.accent;
+// Understand: an empty string removes the variable, so the theme's own CSS colour comes back.
+const colourVars = (parsed: ParsedDoc, id: string) => ({
+  "--accent": parsed.overrides.colors?.accent ?? themeById(id).defaults.colors.accent,
+  "--text": parsed.overrides.colors?.text ?? "",
+  "--muted": parsed.overrides.colors?.muted ?? "",
+});
 
 // The problem is the Document form and toolbar must reflect the YAML the moment it changes, not after the render debounce.
 // The way we solve this is to re-parse the front matter synchronously on every edit (cheap) and resolve settings for the active theme.
@@ -120,7 +128,7 @@ async function renderDoc() {
   const htmlFor = (t: Theme) => compose({ bodyHtml, settings: resolveSettings(parsed, t.id, t.defaults), themeCss: t.css });
 
   state.htmlFor = htmlFor;
-  pool.setVars((id) => ({ "--accent": accentFor(parsed, id) }));
+  pool.setVars((id) => colourVars(parsed, id));
   pool.show(state.hoverTheme ?? theme.id);
 
   const activeHtml = htmlFor(theme);
@@ -172,6 +180,27 @@ function setSetting(path: string[], value: unknown, opts?: { debounce: boolean }
   if (opts?.debounce) return;
   clearTimeout(renderTimer);
   renderDoc();
+}
+
+// The problem is a picker opened near the right edge would hang off-screen and make the whole app scroll sideways.
+// The way we solve this is to nudge the open panel left until it fits inside the window with a 12px gutter.
+function keepPopoverOnScreen() {
+  const pop = tools.querySelector<HTMLElement>(".pop");
+  if (!pop) return;
+  pop.style.left = "";
+  const overflow = pop.getBoundingClientRect().right - (window.innerWidth - 12);
+  if (overflow > 0) pop.style.left = `${-overflow}px`;
+}
+
+function setPopover(popover: Popover) {
+  state.popover = popover;
+  draw();
+}
+
+function setFontUi(ui: { target?: FontTarget; filter?: FontFilter }) {
+  if (ui.target) state.fontTarget = ui.target;
+  if (ui.filter) state.fontFilter = ui.filter;
+  draw();
 }
 
 function setDetailsOpen(open: boolean) {
@@ -246,7 +275,22 @@ function draw() {
   );
   if (state.parsed && state.settings) {
     const { parsed, settings, theme } = state;
-    render(toolbar({ settings, overrides: parsed.overrides, theme, setSetting, previewTheme }), tools);
+    render(
+      toolbar({
+        settings,
+        overrides: parsed.overrides,
+        theme,
+        setSetting,
+        previewTheme,
+        popover: state.popover,
+        setPopover,
+        fontTarget: state.fontTarget,
+        fontFilter: state.fontFilter,
+        setFontUi,
+      }),
+      tools,
+    );
+    keepPopoverOnScreen();
     render(
       details({
         open: state.detailsOpen,
@@ -269,7 +313,13 @@ async function main() {
   state.detailsOpen = readStored(DETAILS_OPEN_KEY) !== "0";
   refreshParsed();
   editor = createEditor(editorHost, state.text, { onChange: onEdit, onToggle: toggleTab, onSave: saveDoc, uploadImage });
+  document.addEventListener("pointerdown", (e) => {
+    if (state.popover && !(e.target as HTMLElement).closest?.(".pop-wrap")) setPopover(null);
+  });
+  // Clicks inside the preview iframe never reach this document, but they do take focus away from it.
+  window.addEventListener("blur", () => state.popover && setPopover(null));
   window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.popover) return setPopover(null);
     if (e.defaultPrevented) return;
     const typing = e.target instanceof HTMLElement && e.target.closest("input, select, textarea, .cm-editor");
     if (e.metaKey || e.ctrlKey) {

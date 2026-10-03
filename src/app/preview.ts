@@ -104,7 +104,11 @@ export class PreviewPool {
 
   private applyVarsTo(id: string, frame: HTMLIFrameElement) {
     const root = frame.contentDocument?.documentElement;
-    if (root) for (const [k, v] of Object.entries(this.varsFor(id))) root.style.setProperty(k, v);
+    if (!root) return;
+    for (const [k, v] of Object.entries(this.varsFor(id))) {
+      if (v) root.style.setProperty(k, v);
+      else root.style.removeProperty(k);
+    }
   }
 
   // The problem is the user wants a PDF file of exactly what the preview shows.

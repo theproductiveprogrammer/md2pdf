@@ -1,7 +1,12 @@
 import { html, nothing } from "lit-html";
 import type { DocSettings, Overrides, Slots } from "../core/config.ts";
-import { FONTS, type FontKind } from "../core/fonts.ts";
+import { FONTS, googleFontsUrl, type FontKind } from "../core/fonts.ts";
+import { PALETTES, paletteMatches } from "../core/palettes.ts";
 import { THEMES, type Theme } from "../themes/index.ts";
+
+export type Popover = "fonts" | "colors" | null;
+export type FontTarget = "both" | "body" | "heading" | "mono";
+export type FontFilter = "all" | FontKind;
 
 export interface ToolbarProps {
   settings: DocSettings;
@@ -9,6 +14,11 @@ export interface ToolbarProps {
   theme: Theme;
   setSetting: (path: string[], value: unknown) => void;
   previewTheme: (id: string | null) => void;
+  popover: Popover;
+  setPopover: (p: Popover) => void;
+  fontTarget: FontTarget;
+  fontFilter: FontFilter;
+  setFontUi: (ui: { target?: FontTarget; filter?: FontFilter }) => void;
 }
 
 const SIZES = ["A4", "A4 landscape", "Letter", "Letter landscape", "A5", "Legal"];
@@ -28,24 +38,141 @@ function toggleSlots(key: "header" | "footer", on: boolean, p: ToolbarProps) {
   else p.setSetting([key], themeHas ? false : undefined);
 }
 
-function fontSelect(label: string, slot: "body" | "heading", p: ToolbarProps) {
-  const current = p.overrides.fonts?.[slot] ?? "";
-  const themeFont = p.theme.defaults.fonts[slot];
-  const known = FONTS.some((f) => f.name === current);
-  const group = (kind: FontKind, title: string) => html`
-    <optgroup label=${title}>
-      ${FONTS.filter((f) => f.kind === kind).map((f) => html`<option .selected=${f.name === current} value=${f.name}>${f.name}</option>`)}
-    </optgroup>
-  `;
+let uiFontsLoaded = false;
+
+// The problem is the font picker should show each font in its own face, but loading 20+ families up front slows the app.
+// The way we solve this is to load a light (regular weight only) copy of every family the first time the picker opens.
+function loadPickerFonts() {
+  if (uiFontsLoaded) return;
+  uiFontsLoaded = true;
+  for (const f of FONTS) {
+    const href = googleFontsUrl(f.name, "wght@400");
+    if (!href) continue;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }
+}
+
+const FONT_TARGETS: [FontTarget, string][] = [
+  ["both", "Body & headings"],
+  ["body", "Body"],
+  ["heading", "Headings"],
+  ["mono", "Code"],
+];
+const FONT_FILTERS: [FontFilter, string][] = [
+  ["all", "All"],
+  ["sans", "Sans"],
+  ["serif", "Serif"],
+  ["mono", "Mono"],
+];
+
+function currentFont(target: FontTarget, s: DocSettings): string | null {
+  if (target === "both") return s.fonts.body === s.fonts.heading ? s.fonts.body : null;
+  return s.fonts[target];
+}
+
+// The problem is "Body & headings" should be a single change, not two edits that re-render twice.
+// The way we solve this is to write the whole fonts block at once; undefined means "back to the theme's font".
+function applyFont(name: string | undefined, p: ToolbarProps) {
+  const fonts = { ...p.overrides.fonts };
+  const slots: ("body" | "heading" | "mono")[] = p.fontTarget === "both" ? ["body", "heading"] : [p.fontTarget];
+  for (const slot of slots) fonts[slot] = name;
+  for (const k of Object.keys(fonts) as (keyof typeof fonts)[]) if (!fonts[k]) delete fonts[k];
+  p.setSetting(["fonts"], Object.keys(fonts).length ? fonts : undefined);
+}
+
+// The problem is choosing a typeface from a plain dropdown means guessing what each name looks like.
+// The way we solve this is a picker that draws every font in its own face, filterable by style, applied to body, headings or code.
+// flow: Preview tab — user opens Typeface and picks a font -> fontPicker() -> applyFont() <-- HERE
+function fontPicker(p: ToolbarProps) {
+  const s = p.settings;
+  const current = currentFont(p.fontTarget, s);
+  const kinds: FontKind[] = p.fontTarget === "mono" ? ["mono"] : p.fontFilter === "all" ? ["sans", "serif", "mono"] : [p.fontFilter];
+  const fonts = FONTS.filter((f) => kinds.includes(f.kind));
+  const label = s.fonts.body === s.fonts.heading ? s.fonts.body : `${s.fonts.heading} / ${s.fonts.body}`;
+  if (p.popover === "fonts") loadPickerFonts();
+
   return html`
-    <label class="field">
-      <span>${label}</span>
-      <select @change=${(e: Event) => p.setSetting(["fonts", slot], (e.target as HTMLSelectElement).value || undefined)}>
-        <option value="" .selected=${!current}>Theme · ${themeFont}</option>
-        ${current && !known ? html`<option .selected=${true} value=${current}>${current}</option>` : nothing}
-        ${group("serif", "Serif")} ${group("sans", "Sans")}
-      </select>
-    </label>
+    <div class="pop-wrap">
+      <button class="pop-trigger" aria-expanded=${p.popover === "fonts"} @click=${() => p.setPopover(p.popover === "fonts" ? null : "fonts")}>
+        <span class="aa" style="font-family: ${s.fonts.heading}">Aa</span> ${label} <span class="caret">▾</span>
+      </button>
+      ${p.popover === "fonts"
+        ? html`
+            <div class="pop fonts-pop" role="dialog" aria-label="Typeface">
+              <div class="seg" role="radiogroup" aria-label="Apply to">
+                ${FONT_TARGETS.map(([t, name]) => html`<button role="radio" aria-checked=${p.fontTarget === t} @click=${() => p.setFontUi({ target: t })}>${name}</button>`)}
+              </div>
+              ${p.fontTarget === "mono"
+                ? nothing
+                : html`<div class="filters">
+                    ${FONT_FILTERS.map(([f, name]) => html`<button class="filter" aria-pressed=${p.fontFilter === f} @click=${() => p.setFontUi({ filter: f })}>${name}</button>`)}
+                  </div>`}
+              <div class="font-list">
+                <button class="font-card theme-default" @click=${() => applyFont(undefined, p)}>
+                  <span class="font-name">Theme default</span>
+                  <span class="font-blurb">${p.theme.name}'s own ${p.fontTarget === "mono" ? "code font" : "fonts"}</span>
+                </button>
+                ${fonts.map(
+                  (f) => html`
+                    <button class="font-card" aria-pressed=${f.name === current} @click=${() => applyFont(f.name, p)}>
+                      <span class="font-name" style="font-family: ${f.stack ?? `'${f.name}'`}">${f.name}</span>
+                      <span class="font-blurb">${f.blurb}</span>
+                      <span class="font-aa" style="font-family: ${f.stack ?? `'${f.name}'`}">Aa</span>
+                    </button>
+                  `,
+                )}
+              </div>
+            </div>
+          `
+        : nothing}
+    </div>
+  `;
+}
+
+const dots = (text: string, muted: string, accent: string) => html`
+  <span class="dots"><i style="background:${text}"></i><i style="background:${muted}"></i><i style="background:${accent}"></i></span>
+`;
+
+// The problem is picking three colours that work together is fiddly; most people want a tasteful preset.
+// The way we solve this is preset text/secondary/accent palettes, plus a custom accent; all apply live without re-pagination.
+// flow: Preview tab — user opens Colours and picks a palette -> colourPicker() -> setSetting(colors) <-- HERE
+function colourPicker(p: ToolbarProps) {
+  const c = p.overrides.colors;
+  const s = p.settings;
+  const fromTheme = !c || Object.keys(c).length === 0;
+  return html`
+    <div class="pop-wrap">
+      <button class="pop-trigger" aria-expanded=${p.popover === "colors"} @click=${() => p.setPopover(p.popover === "colors" ? null : "colors")}>
+        ${dots(s.colors.text ?? "#1c1917", s.colors.muted ?? "#78716c", s.colors.accent)} Colours <span class="caret">▾</span>
+      </button>
+      ${p.popover === "colors"
+        ? html`
+            <div class="pop colors-pop" role="dialog" aria-label="Colours">
+              <div class="palette-grid">
+                <button class="palette" aria-pressed=${fromTheme} title="Theme colours" @click=${() => p.setSetting(["colors"], undefined)}>
+                  ${dots("#1c1917", "#78716c", p.theme.defaults.colors.accent)}
+                  <span>Theme</span>
+                </button>
+                ${PALETTES.map(
+                  (pal) => html`
+                    <button class="palette" aria-pressed=${paletteMatches(pal, c)} title=${pal.name} @click=${() => p.setSetting(["colors"], { text: pal.text, muted: pal.muted, accent: pal.accent })}>
+                      ${dots(pal.text, pal.muted, pal.accent)}
+                      <span>${pal.name}</span>
+                    </button>
+                  `,
+                )}
+              </div>
+              <label class="field custom-accent">
+                <span>Custom accent</span>
+                <input type="color" .value=${s.colors.accent} @input=${(e: Event) => p.setSetting(["colors", "accent"], (e.target as HTMLInputElement).value)} />
+              </label>
+            </div>
+          `
+        : nothing}
+    </div>
   `;
 }
 
@@ -90,14 +217,7 @@ export function toolbar(p: ToolbarProps) {
         ${margin && !marginKnown ? html`<option value=${margin} .selected=${true}>Custom · ${margin}</option>` : nothing}
       </select>
     </label>
-    ${fontSelect("Body", "body", p)} ${fontSelect("Headings", "heading", p)}
-    <label class="field color">
-      <span>Accent</span>
-      <input type="color" .value=${settings.colors.accent} @input=${(e: Event) => p.setSetting(["colors", "accent"], (e.target as HTMLInputElement).value)} />
-      ${overrides.colors?.accent
-        ? html`<button class="reset" title="Back to theme colour" @click=${() => p.setSetting(["colors", "accent"], undefined)}>↺</button>`
-        : nothing}
-    </label>
+    ${fontPicker(p)} ${colourPicker(p)}
     <span class="sep"></span>
     <label class="check"><input type="checkbox" .checked=${!!settings.header} @change=${(e: Event) => toggleSlots("header", (e.target as HTMLInputElement).checked, p)} /> Header</label>
     <label class="check"><input type="checkbox" .checked=${!!settings.footer} @change=${(e: Event) => toggleSlots("footer", (e.target as HTMLInputElement).checked, p)} /> Footer</label>
