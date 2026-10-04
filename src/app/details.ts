@@ -17,7 +17,7 @@ export interface DetailsProps {
 
 type Side = "left" | "center" | "right";
 const SIDES: Side[] = ["left", "center", "right"];
-const TOKENS = "{title} {author} {date} {page} {pages}";
+const TOKENS = "{title} {author} {date} {page} {pages} {logo}";
 
 // The problem is a theme's default header/footer should keep printing until the user actually changes it.
 // The way we solve this is to start an edit from whatever is currently in effect (front matter, else theme default) and write the whole set back.
@@ -37,8 +37,7 @@ function writeSlots(key: SlotKey, next: Slots, p: DetailsProps, debounce: boolea
 }
 
 // The problem is the user needs to see and control whether a header/footer prints, right where they edit its text.
-// The way we solve this is a show checkbox on each row; while off, the slots are disabled. The header's empty right slot reads
-// "logo" when the theme has one, since that's what will print there.
+// The way we solve this is a show checkbox on each row; while off, the slots are disabled.
 // flow: Write tab — user ticks Header/Footer or edits a slot -> slotRow() -> toggleSlots()/writeSlots() <-- HERE
 function slotRow(key: SlotKey, label: string, p: DetailsProps) {
   const current = p.overrides[key];
@@ -49,7 +48,6 @@ function slotRow(key: SlotKey, label: string, p: DetailsProps) {
   const placeholder = (side: Side) => {
     if (!shown) return "";
     if (current === undefined && themeSlots[side]) return themeSlots[side]!;
-    if (key === "header" && side === "right" && p.theme.defaults.logo) return "logo";
     return side;
   };
   return html`
@@ -81,7 +79,7 @@ function slotRow(key: SlotKey, label: string, p: DetailsProps) {
   `;
 }
 
-const textField = (label: string, key: "title" | "author" | "date", placeholder: string, p: DetailsProps, wide = false) => html`
+const textField = (label: string, key: "title" | "author" | "date" | "logo", placeholder: string, p: DetailsProps, wide = false) => html`
   <label class="text-field ${wide ? "wide" : ""}">
     <span>${label}</span>
     <input
@@ -108,6 +106,7 @@ export function details(p: DetailsProps) {
             <div class="form-grid">
               ${textField("Title", "title", p.fallbackTitle, p, true)} ${textField("Author", "author", "Your name", p)}
               ${textField("Date", "date", p.settings.date, p)}
+              ${textField("Logo", "logo", p.theme.defaults.logo ? `${p.theme.name} logo` : "./assets/logo.png", p)}
             </div>
             <div class="slot-grid">${slotRow("header", "Header", p)} ${slotRow("footer", "Footer", p)}</div>
             <div class="options">
@@ -130,9 +129,8 @@ export function details(p: DetailsProps) {
               </label>
             </div>
             <p class="form-hint">
-              Use ${TOKENS.split(" ").map((t) => html`<code>${t}</code> `)}in header/footer text. Grey text is the theme's default${p.theme.defaults.logo
-                ? html`; ${p.theme.name}'s logo prints in the header's right slot when it's empty`
-                : ""}.
+              Use ${TOKENS.split(" ").map((t) => html`<code>${t}</code> `)}in header/footer text; <code>{logo}</code> must be on its own in a
+              box. Grey text is the theme's default.
             </p>
           `}
     </details>

@@ -29,6 +29,8 @@ export interface DocSettings {
   typography: boolean;
   fonts: { body: string; heading: string; mono: string };
   colors: Colors;
+  // Image for the {logo} placeholder: a path relative to the document, a URL, or a theme's built-in data URI. Null = none.
+  logo: string | null;
 }
 
 // What a theme may preset; front matter always wins over these.
@@ -39,7 +41,7 @@ export interface ThemeDefaults {
   breakBeforeH1?: boolean;
   fonts: DocSettings["fonts"];
   colors: Colors;
-  // Data URI of a logo shown in the header's right slot whenever the header is on and that slot has no text.
+  // Built-in logo (data URI) for the {logo} placeholder; the document's own `logo:` setting replaces it.
   logo?: string;
 }
 
@@ -57,6 +59,7 @@ export interface Overrides {
   typography?: boolean;
   fonts?: Partial<DocSettings["fonts"]>;
   colors?: Partial<DocSettings["colors"]>;
+  logo?: string;
 }
 
 export interface ParsedDoc {
@@ -66,7 +69,7 @@ export interface ParsedDoc {
   error: string | null;
 }
 
-const LEADING_KEYS = ["title", "author", "date"];
+const LEADING_KEYS = ["title", "author", "date", "logo"];
 
 export const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
@@ -120,6 +123,7 @@ export function parseDoc(source: string, fileName: string | null): ParsedDoc {
       typography: typeof meta.typography === "boolean" ? meta.typography : undefined,
       fonts: pick(meta.fonts, ["body", "heading", "mono"]),
       colors: pick(meta.colors, ["text", "muted", "quote", "accent"]),
+      logo: str(meta.logo),
     },
   };
 }
@@ -144,6 +148,7 @@ export function resolveSettings(parsed: ParsedDoc, themeId: string, theme: Theme
     typography: o.typography ?? true,
     fonts: { ...theme.fonts, ...o.fonts },
     colors: { ...theme.colors, ...o.colors },
+    logo: o.logo || theme.logo || null,
   };
 }
 

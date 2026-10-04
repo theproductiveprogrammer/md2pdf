@@ -1,7 +1,7 @@
 import { html, render } from "lit-html";
 import type { EditorView } from "codemirror";
 import { editFrontMatter, parseDoc, resolveSettings, type DocSettings, type ParsedDoc } from "../core/config.ts";
-import { renderMarkdown } from "../core/markdown.ts";
+import { assetUrl, renderMarkdown } from "../core/markdown.ts";
 import { compose } from "../core/compose.ts";
 import { THEMES, themeById, type Theme } from "../themes/index.ts";
 import { createEditor } from "./editor.ts";
@@ -114,6 +114,14 @@ function refreshParsed() {
   Object.assign(state, { parsed, theme, settings: resolveSettings(parsed, theme.id, theme.defaults) });
 }
 
+// A `logo:` path is relative to the document, like its images.
+// Understand: it must be absolute — Paged.js resolves CSS url()s against the page's address, which an srcdoc iframe doesn't
+// have, so a relative URL throws and aborts the whole render (data URIs are exempt).
+const withAssetUrls = (s: DocSettings): DocSettings => ({
+  ...s,
+  logo: s.logo && new URL(assetUrl(s.logo, state.docPath), location.origin).href,
+});
+
 // The problem is the user wants the paginated view ready the instant they flip to Preview, in whichever theme they pick.
 // The way we solve this is to render the active theme first, then quietly pre-render the other themes while the browser is idle.
 // flow: Write tab — user types -> scheduleRender() -> renderDoc() <-- HERE
@@ -127,10 +135,9 @@ async function renderDoc() {
   const htmlFor = (t: Theme) =>
     compose({
       bodyHtml,
-      settings: resolveSettings(parsed, t.id, t.defaults),
+      settings: withAssetUrls(resolveSettings(parsed, t.id, t.defaults)),
       themeCss: t.css,
       themeColors: t.defaults.colors,
-      themeLogo: t.defaults.logo,
     });
 
   state.htmlFor = htmlFor;

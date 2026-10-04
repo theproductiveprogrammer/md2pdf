@@ -151,7 +151,7 @@ body:not([data-tab="preview"]) #tools { display: none; }
 .doc-details[open] summary::before { transform: rotate(90deg); }
 .summary-hint { font-weight: 400; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .doc-details[open] .summary-hint { display: none; }
-.form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
 .text-field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; min-width: 0; }
 .text-field input, .slot {
   font: inherit;

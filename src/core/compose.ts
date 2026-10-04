@@ -7,9 +7,10 @@ const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 
 // The problem is the user writes header/footer text like "Page {page} of {pages}", but print CSS needs counters and quoted strings.
 // The way we solve this is to substitute document fields directly and turn {page}/{pages} into CSS counter() calls.
+// Understand: {logo} is dropped here — a logo must fill its slot on its own (see marginBoxes).
 function slotContent(template: string, settings: DocSettings): string {
   const parts: string[] = [];
-  for (const piece of template.split(/(\{page\}|\{pages\})/)) {
+  for (const piece of template.replace(/\{logo\}/g, "").split(/(\{page\}|\{pages\})/)) {
     if (piece === "{page}") parts.push("counter(page)");
     else if (piece === "{pages}") parts.push("counter(pages)");
     else if (piece) {
@@ -22,19 +23,22 @@ function slotContent(template: string, settings: DocSettings): string {
 
 // The problem is headers and footers must repeat on every printed page, optionally skipping the cover page.
 // The way we solve this is CSS @page margin boxes (top-left/center/right, bottom-…), which Paged.js lays out per page.
-// Understand: a theme logo is part of the header — it only appears when the header is on, honours "skip first page", and
-// yields to any text the user puts in the right slot. Paged.js sizes margin boxes by their text, so the logo box needs a width.
-function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings: DocSettings, logo?: string): { all: string; first: string } {
+// Understand: a slot whose text is exactly {logo} shows the logo image, aligned to its side. Margin boxes can't mix an image
+// with text, so {logo} alongside other words is ignored. Paged.js sizes margin boxes by their text, so a logo box needs a width.
+function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings: DocSettings): { all: string; first: string } {
   if (!slots) return { all: "", first: "" };
   const all: string[] = [];
   const first: string[] = [];
   for (const side of ["left", "center", "right"] as const) {
-    const text = slots[side];
-    if (text) {
+    const text = slots[side]?.trim();
+    if (!text) continue;
+    if (text === "{logo}") {
+      if (!settings.logo) continue;
+      const url = settings.logo.replace(/["\\]/g, "\\$&");
+      all.push(`@${position}-${side} { content: ""; width: 30mm; background: url("${url}") no-repeat ${side} center / auto 9mm; }`);
+    } else {
       all.push(`@${position}-${side} { content: ${slotContent(text, settings)}; }`);
-    } else if (side === "right" && logo) {
-      all.push(`@${position}-right { content: ""; width: 30mm; background: url("${logo}") no-repeat right center / auto 9mm; }`);
-    } else continue;
+    }
     if (slots.skipFirst) first.push(`@${position}-${side} { content: none; background: none; }`);
   }
   return { all: all.join("\n    "), first: first.join("\n    ") };
@@ -46,9 +50,9 @@ function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings:
 // colours are baked in so the page stands alone; the user's colour overrides are left out (applied live by the app) so
 // recolouring never forces a re-pagination.
 // flow: Preview tab — renderDoc() -> composeFor(theme) -> compose() <-- HERE
-export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string; themeColors: Colors; themeLogo?: string }): string {
-  const { settings, bodyHtml, themeCss, themeColors, themeLogo } = opts;
-  const header = marginBoxes("top", settings.header, settings, themeLogo);
+export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string; themeColors: Colors }): string {
+  const { settings, bodyHtml, themeCss, themeColors } = opts;
+  const header = marginBoxes("top", settings.header, settings);
   const footer = marginBoxes("bottom", settings.footer, settings);
   const fonts = [...new Set([settings.fonts.body, settings.fonts.heading, settings.fonts.mono])]
     .map((name) => googleFontsUrl(name))
@@ -102,7 +106,11 @@ ${fonts}
     },
     after: (flow) => parent.postMessage({ type: "md2pdf:rendered", pages: flow.total }, "*"),
   };
+  // Paged.js fails asynchronously (rejected promises), so listen for both kinds of error; otherwise the app would keep
+  // showing stale pages with no hint that the new render failed.
   window.addEventListener("error", (e) => parent.postMessage({ type: "md2pdf:error", message: String(e.message) }, "*"));
+  window.addEventListener("unhandledrejection", (e) =>
+    parent.postMessage({ type: "md2pdf:error", message: "Preview failed: " + String(e.reason?.message ?? e.reason) }, "*"));
 </script>
 <script src="/vendor/paged.polyfill.js"></script>
 <script>

@@ -24,7 +24,7 @@ Requires Node 23.6 or newer, which runs the TypeScript server directly. Export w
 The app has two tabs. **⌘↵** switches between them.
 
 **Write** is a Markdown editor with a **Document** form above it. The form has:
-- title, author and date
+- title, author, date and logo
 - header and footer, each with a show/hide checkbox, left/center/right text and "Skip first page"
 - options: **Chapter breaks** (each `# H1` starts a new page) and **Smart typography**
 
@@ -102,6 +102,7 @@ Everything is optional. Anything you leave out comes from the theme.
 title: Q3 Report            # defaults to the first "# Heading"
 author: Ada Ramirez
 date: October 3, 2026       # defaults to today
+logo: ./assets/logo.png     # image for {logo}; relative to this file, or a URL. Defaults to the theme's logo, if any
 lang: en                    # used for hyphenation and date format
 theme: modern               # modern | classic | academic | minimal | github | fsai | resume
 page:
@@ -127,7 +128,9 @@ colors:
 ---
 ```
 
-Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}` and `{pages}`.
+Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}`, `{pages}` and `{logo}`.
+
+`{logo}` prints the logo image, aligned to its box's side. It must be the only thing in its box, because page margins can't mix an image with text, so `Page {page} {logo}` prints just the text. The image is the document's `logo:` setting, or the theme's built-in logo if there is none. A theme without a logo and a document without `logo:` print nothing for `{logo}`.
 
 ## Themes
 
@@ -138,7 +141,7 @@ Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}` and `{p
 | **Academic** | Paper style: numbered sections, booktabs tables, numbered figures |
 | **Minimal** | One sans family, quiet hierarchy, generous whitespace |
 | **GitHub** | README look: system font, ruled headings, gridded and striped tables |
-| **FSAI** | Future Secure AI brand (Brand Guidelines V8): Montserrat only, black text, no italics (emphasis is Medium), black callouts and table heads, logo top-right on every page |
+| **FSAI** | Future Secure AI brand (Brand Guidelines V8): Montserrat only, black text, no italics (emphasis is Medium), black callouts and table heads, logo top-right (`header.right: "{logo}"`) |
 | **Resume** | Compact one-pager: large name, ruled section labels, tight lists |
 
 **Fonts.** You can choose from 25 fonts:
@@ -190,7 +193,7 @@ examples/              welcome.md, kitchen-sink.md, resume.md, fsai-report.md
 
 1. Create `src/themes/<name>.css`. Style elements with the palette variables (`--text`, `--muted`, `--quote`, `--accent`) and the font variables (`--font-body`, `--font-heading`, `--font-mono`). Never hard-code colours.
 2. Register it in `src/themes/index.ts` with its default fonts, colours, margins and header/footer.
-3. For a logo, put the image in `src/themes/assets/`, import it with `?inline`, and set it as the theme's `logo` default (see the FSAI theme). It prints in the header's right slot whenever the header is shown and that slot has no text, and it's embedded in the page, so exported PDFs are self-contained.
+3. For a built-in logo, put the image in `src/themes/assets/`, import it with `?inline`, set it as the theme's `logo` default, and place `{logo}` in a header or footer slot (see the FSAI theme). It's embedded in the page, so exported PDFs are self-contained. A document's own `logo:` setting replaces it.
 
 Paged.js limitation: it rewrites `A + B` selectors, which drops pseudo-elements. A rule like `h1 + p::first-letter` silently disappears. Use the `p.lead` class (the paragraph after an H1) instead.
 

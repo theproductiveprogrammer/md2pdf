@@ -81,11 +81,11 @@ export const THEMES: Theme[] = [
     css: base + fsai,
     defaults: {
       page: { margin: "24mm 18mm 20mm" },
-      header: { left: "{title}" },
+      header: { left: "{title}", right: "{logo}" },
       footer: { right: "{page}" },
       fonts: { body: "Montserrat", heading: "Montserrat", mono: "System Mono" },
       colors: { text: "#000000", muted: "#8c8c8c", quote: "#000000", accent: "#096c93" },
-      // Logo top-right on every page, per the brand guidelines; embedded so exported PDFs are self-contained.
+      // The {logo} image (top-right of the header, per the brand guidelines); embedded so exported PDFs are self-contained.
       logo: fsaiLogo,
     },
   },

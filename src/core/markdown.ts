@@ -27,17 +27,22 @@ function pagebreakPlugin(md: Md) {
   );
 }
 
-// The problem is `![](./img.png)` in the markdown means "next to the .md file", but the preview page lives at a different URL.
-// The way we solve this is to rewrite relative image paths to /files/<doc folder>/..., which the local server reads from disk.
+const docDirOf = (docPath: string | null) => (docPath?.includes("/") ? docPath.slice(0, docPath.lastIndexOf("/") + 1) : "");
+
+// The problem is `./img.png` in a document means "next to the .md file", but the preview page lives at a different URL.
+// The way we solve this is to rewrite relative paths to /files/<doc folder>/..., which the local server reads from disk;
+// URLs, data URIs and absolute paths pass through untouched.
+export function assetUrl(src: string, docPath: string | null): string {
+  if (!src || /^([a-z][a-z0-9+.-]*:|\/|#)/i.test(src)) return src;
+  return "/files/" + new URL(src, `http://x/${docDirOf(docPath)}`).pathname.slice(1);
+}
+
 // flow: Preview tab — user switches to Preview -> renderMarkdown() -> resolveImagesPlugin <-- HERE
-function resolveImagesPlugin(md: Md, docDir: string) {
-  const isExternal = (src: string) => /^([a-z][a-z0-9+.-]*:|\/|#)/i.test(src);
+function resolveImagesPlugin(md: Md, docPath: string | null) {
   md.core.ruler.push("resolve_images", (state) => {
     for (const block of state.tokens) {
       for (const t of block.children ?? []) {
-        if (t.type !== "image") continue;
-        const src = String(t.attrGet("src") ?? "");
-        if (src && !isExternal(src)) t.attrSet("src", "/files/" + new URL(src, `http://x/${docDir}`).pathname.slice(1));
+        if (t.type === "image") t.attrSet("src", assetUrl(String(t.attrGet("src") ?? ""), docPath));
       }
     }
   });
@@ -105,7 +110,6 @@ function tableKeepPlugin(md: Md) {
 // The way we solve this is markdown-it with typographer on, plus our pagebreak, typography, figure and image-path plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
 export function renderMarkdown(body: string, opts: { docPath: string | null; typography: boolean }): string {
-  const docDir = opts.docPath?.includes("/") ? opts.docPath.slice(0, opts.docPath.lastIndexOf("/") + 1) : "";
   const md = new MarkdownIt({ html: true, linkify: true, typographer: opts.typography })
     .use(attrs)
     .use(pagebreakPlugin)
@@ -113,6 +117,6 @@ export function renderMarkdown(body: string, opts: { docPath: string | null; typ
     .use(figurePlugin)
     .use(leadParagraphPlugin)
     .use(tableKeepPlugin)
-    .use(resolveImagesPlugin, docDir);
+    .use(resolveImagesPlugin, opts.docPath);
   return md.render(body);
 }
