@@ -167,6 +167,9 @@ body:not([data-tab="preview"]) #tools { display: none; }
 .text-field input::placeholder, .slot::placeholder { color: var(--muted); opacity: 0.7; }
 .slot-grid { display: grid; grid-template-columns: auto 1fr 1fr 1fr auto; gap: 8px 10px; align-items: center; margin-top: 12px; }
 .row-label { color: var(--muted); font-size: 12px; }
+.slot:disabled { opacity: 0.45; cursor: not-allowed; }
+.options { display: flex; align-items: center; gap: 18px; margin-top: 12px; font-size: 12px; }
+.options .check { color: var(--text); }
 .slot-grid .check { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .form-hint { margin: 10px 0 12px; color: var(--muted); font-size: 12px; }
 .form-hint code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 3px; }

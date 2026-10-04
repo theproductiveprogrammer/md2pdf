@@ -23,7 +23,12 @@ Requires Node 23.6 or newer, which runs the TypeScript server directly. Export w
 
 The app has two tabs. **⌘↵** switches between them.
 
-**Write** is a Markdown editor with a **Document** form above it, where you set the title, author, date, header and footer. The form and the YAML front matter at the top of the file stay in sync both ways: typing in the form edits the YAML, and editing the YAML updates the form.
+**Write** is a Markdown editor with a **Document** form above it. The form has:
+- title, author and date
+- header and footer, each with a show/hide checkbox, left/center/right text and "Skip first page"
+- options: **Chapter breaks** (each `# H1` starts a new page) and **Smart typography**
+
+The form and the YAML front matter at the top of the file stay in sync both ways: typing in the form edits the YAML, and editing the YAML updates the form. Grey placeholder text shows what the theme prints by default.
 
 **Preview** shows the actual paginated pages, with a toolbar for:
 
@@ -31,7 +36,6 @@ The app has two tabs. **⌘↵** switches between them.
 - **Size and margins**: A4, Letter, A5, Legal, and landscape A4/Letter. Margins are Narrow, Normal, Wide or the theme default.
 - **Typeface**: each font is drawn in its own face. Filter by Sans, Serif or Mono, and apply it to body and headings together, either one alone, or code.
 - **Colours**: ten palettes, or set each of the four palette colours yourself.
-- **Header, footer, chapter breaks** (each `# H1` starts a new page), and **smart typography**.
 
 Every toolbar choice is written into the front matter, so the document carries its own look. **Export PDF** opens the print dialog. Choose **Save as PDF** to save exactly what the preview shows.
 
@@ -186,7 +190,7 @@ examples/              welcome.md, kitchen-sink.md, resume.md, fsai-report.md
 
 1. Create `src/themes/<name>.css`. Style elements with the palette variables (`--text`, `--muted`, `--quote`, `--accent`) and the font variables (`--font-body`, `--font-heading`, `--font-mono`). Never hard-code colours.
 2. Register it in `src/themes/index.ts` with its default fonts, colours, margins and header/footer.
-3. For a logo on every page, put the image in `src/themes/assets/`, import it with `?inline`, and add it with `logoInMargin()` (see the FSAI theme). The image is embedded in the theme CSS, so exported PDFs are self-contained.
+3. For a logo, put the image in `src/themes/assets/`, import it with `?inline`, and set it as the theme's `logo` default (see the FSAI theme). It prints in the header's right slot whenever the header is shown and that slot has no text, and it's embedded in the page, so exported PDFs are self-contained.
 
 Paged.js limitation: it rewrites `A + B` selectors, which drops pseudo-elements. A rule like `h1 + p::first-letter` silently disappears. Use the `p.lead` class (the paragraph after an H1) instead.
 

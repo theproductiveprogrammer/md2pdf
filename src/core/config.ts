@@ -39,6 +39,8 @@ export interface ThemeDefaults {
   breakBeforeH1?: boolean;
   fonts: DocSettings["fonts"];
   colors: Colors;
+  // Data URI of a logo shown in the header's right slot whenever the header is on and that slot has no text.
+  logo?: string;
 }
 
 // Only the keys the user actually wrote in front matter.

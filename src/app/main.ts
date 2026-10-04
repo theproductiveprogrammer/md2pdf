@@ -125,7 +125,13 @@ async function renderDoc() {
   const theme = state.theme;
   const bodyHtml = renderMarkdown(parsed.body, { docPath: state.docPath, typography: parsed.overrides.typography ?? true });
   const htmlFor = (t: Theme) =>
-    compose({ bodyHtml, settings: resolveSettings(parsed, t.id, t.defaults), themeCss: t.css, themeColors: t.defaults.colors });
+    compose({
+      bodyHtml,
+      settings: resolveSettings(parsed, t.id, t.defaults),
+      themeCss: t.css,
+      themeColors: t.defaults.colors,
+      themeLogo: t.defaults.logo,
+    });
 
   state.htmlFor = htmlFor;
   pool.setVars((id) => colourVars(parsed, id));

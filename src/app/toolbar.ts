@@ -1,5 +1,5 @@
 import { html, nothing } from "lit-html";
-import type { Colors, DocSettings, Overrides, Slots } from "../core/config.ts";
+import type { Colors, DocSettings, Overrides } from "../core/config.ts";
 import { FONTS, googleFontsUrl, type FontKind } from "../core/fonts.ts";
 import { PALETTES, paletteMatches } from "../core/palettes.ts";
 import { THEMES, type Theme } from "../themes/index.ts";
@@ -27,16 +27,6 @@ const MARGINS: [string, string][] = [
   ["Normal", "20mm"],
   ["Wide", "28mm"],
 ];
-const DEFAULT_HEADER: Slots = { left: "{title}", right: "{date}", skipFirst: true };
-const DEFAULT_FOOTER: Slots = { center: "{page} / {pages}" };
-
-// The problem is a toggle must be able to return to "whatever the theme does", not just on/off.
-// The way we solve this is: turning on restores the theme's own header/footer if it has one (by deleting the override), else writes a default.
-function toggleSlots(key: "header" | "footer", on: boolean, p: ToolbarProps) {
-  const themeHas = !!p.theme.defaults[key];
-  if (on) p.setSetting([key], themeHas ? undefined : key === "header" ? DEFAULT_HEADER : DEFAULT_FOOTER);
-  else p.setSetting([key], themeHas ? false : undefined);
-}
 
 let uiFontsLoaded = false;
 
@@ -194,7 +184,8 @@ function colourPicker(p: ToolbarProps) {
   `;
 }
 
-// The problem is the user wants to try looks quickly — themes, paper, margins, fonts, colour — without hand-editing YAML.
+// The problem is the user wants to try looks quickly — themes, paper, margins, fonts, colour — against the real pages.
+// Content options (header/footer, chapter breaks, typography) live in the Document form on the Write tab instead.
 // The way we solve this is a toolbar whose every control writes into the front matter; hovering a theme previews it without committing.
 // flow: Preview tab — user changes any control -> toolbar() -> setSetting() <-- HERE
 export function toolbar(p: ToolbarProps) {
@@ -236,14 +227,5 @@ export function toolbar(p: ToolbarProps) {
       </select>
     </label>
     ${fontPicker(p)} ${colourPicker(p)}
-    <span class="sep"></span>
-    <label class="check"><input type="checkbox" .checked=${!!settings.header} @change=${(e: Event) => toggleSlots("header", (e.target as HTMLInputElement).checked, p)} /> Header</label>
-    <label class="check"><input type="checkbox" .checked=${!!settings.footer} @change=${(e: Event) => toggleSlots("footer", (e.target as HTMLInputElement).checked, p)} /> Footer</label>
-    <label class="check" title="Start every H1 on a new page">
-      <input type="checkbox" .checked=${settings.breakBeforeH1} @change=${(e: Event) => p.setSetting(["breakBeforeH1"], (e.target as HTMLInputElement).checked || undefined)} /> Chapter breaks
-    </label>
-    <label class="check" title="Curly quotes, dashes, ellipses, non-breaking spaces">
-      <input type="checkbox" .checked=${settings.typography} @change=${(e: Event) => p.setSetting(["typography"], (e.target as HTMLInputElement).checked ? undefined : false)} /> Smart typography
-    </label>
   `;
 }

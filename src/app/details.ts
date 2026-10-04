@@ -2,6 +2,7 @@ import { html } from "lit-html";
 import { live } from "lit-html/directives/live.js";
 import type { DocSettings, Overrides, Slots } from "../core/config.ts";
 import type { Theme } from "../themes/index.ts";
+import { toggleSlots, type SlotKey } from "./slots.ts";
 
 export interface DetailsProps {
   open: boolean;
@@ -14,7 +15,6 @@ export interface DetailsProps {
   setOpen: (open: boolean) => void;
 }
 
-type SlotKey = "header" | "footer";
 type Side = "left" | "center" | "right";
 const SIDES: Side[] = ["left", "center", "right"];
 const TOKENS = "{title} {author} {date} {page} {pages}";
@@ -26,29 +26,45 @@ function slotBase(key: SlotKey, p: DetailsProps): Slots {
   return o === undefined ? { ...(p.theme.defaults[key] || {}) } : { ...(o || {}) };
 }
 
-// Understand: clearing every slot writes `false` when the theme has its own default (so it really disappears), otherwise removes the key.
+// Understand: on/off is the row's checkbox, so clearing every slot never switches it off — over a theme default it leaves an empty
+// set (the theme logo, if any, still shows); otherwise it removes the key.
 function writeSlots(key: SlotKey, next: Slots, p: DetailsProps, debounce: boolean) {
   const clean: Slots = {};
   for (const side of SIDES) if (next[side]) clean[side] = next[side];
-  if (!SIDES.some((s) => clean[s])) return p.setSetting([key], p.theme.defaults[key] ? false : undefined, { debounce });
   if (next.skipFirst) clean.skipFirst = true;
-  p.setSetting([key], clean, { debounce });
+  const empty = !SIDES.some((s) => clean[s]);
+  p.setSetting([key], empty && !p.theme.defaults[key] ? undefined : clean, { debounce });
 }
 
+// The problem is the user needs to see and control whether a header/footer prints, right where they edit its text.
+// The way we solve this is a show checkbox on each row; while off, the slots are disabled. The header's empty right slot reads
+// "logo" when the theme has one, since that's what will print there.
+// flow: Write tab — user ticks Header/Footer or edits a slot -> slotRow() -> toggleSlots()/writeSlots() <-- HERE
 function slotRow(key: SlotKey, label: string, p: DetailsProps) {
   const current = p.overrides[key];
+  const shown = !!p.settings[key];
   const themeSlots = p.theme.defaults[key] || {};
   const values: Slots = current === undefined ? {} : current || {};
   const skipFirst = current === undefined ? !!themeSlots.skipFirst : !!(current && current.skipFirst);
+  const placeholder = (side: Side) => {
+    if (!shown) return "";
+    if (current === undefined && themeSlots[side]) return themeSlots[side]!;
+    if (key === "header" && side === "right" && p.theme.defaults.logo) return "logo";
+    return side;
+  };
   return html`
-    <span class="row-label">${label}</span>
+    <label class="check row-label">
+      <input type="checkbox" .checked=${live(shown)} @change=${(e: Event) => toggleSlots(key, (e.target as HTMLInputElement).checked, p.theme, p.setSetting)} />
+      ${label}
+    </label>
     ${SIDES.map(
       (side) => html`
         <input
           class="slot"
           aria-label="${label} ${side}"
-          .value=${live(values[side] ?? "")}
-          placeholder=${current === undefined && themeSlots[side] ? themeSlots[side]! : side}
+          ?disabled=${!shown}
+          .value=${live(shown ? values[side] ?? "" : "")}
+          placeholder=${placeholder(side)}
           @input=${(e: Event) => writeSlots(key, { ...slotBase(key, p), [side]: (e.target as HTMLInputElement).value }, p, true)}
         />
       `,
@@ -56,6 +72,7 @@ function slotRow(key: SlotKey, label: string, p: DetailsProps) {
     <label class="check">
       <input
         type="checkbox"
+        ?disabled=${!shown}
         .checked=${live(skipFirst)}
         @change=${(e: Event) => writeSlots(key, { ...slotBase(key, p), skipFirst: (e.target as HTMLInputElement).checked }, p, false)}
       />
@@ -93,8 +110,29 @@ export function details(p: DetailsProps) {
               ${textField("Date", "date", p.settings.date, p)}
             </div>
             <div class="slot-grid">${slotRow("header", "Header", p)} ${slotRow("footer", "Footer", p)}</div>
+            <div class="options">
+              <span class="row-label">Options</span>
+              <label class="check" title="Start every top-level heading on a new page">
+                <input
+                  type="checkbox"
+                  .checked=${live(p.settings.breakBeforeH1)}
+                  @change=${(e: Event) => p.setSetting(["breakBeforeH1"], (e.target as HTMLInputElement).checked || undefined)}
+                />
+                Chapter breaks
+              </label>
+              <label class="check" title="Curly quotes, dashes, ellipses, fractions, non-breaking spaces">
+                <input
+                  type="checkbox"
+                  .checked=${live(p.settings.typography)}
+                  @change=${(e: Event) => p.setSetting(["typography"], (e.target as HTMLInputElement).checked ? undefined : false)}
+                />
+                Smart typography
+              </label>
+            </div>
             <p class="form-hint">
-              Use ${TOKENS.split(" ").map((t) => html`<code>${t}</code> `)}in header/footer text. Grey text is the theme's default.
+              Use ${TOKENS.split(" ").map((t) => html`<code>${t}</code> `)}in header/footer text. Grey text is the theme's default${p.theme.defaults.logo
+                ? html`; ${p.theme.name}'s logo prints in the header's right slot when it's empty`
+                : ""}.
             </p>
           `}
     </details>

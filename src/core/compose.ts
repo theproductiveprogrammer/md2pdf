@@ -22,15 +22,20 @@ function slotContent(template: string, settings: DocSettings): string {
 
 // The problem is headers and footers must repeat on every printed page, optionally skipping the cover page.
 // The way we solve this is CSS @page margin boxes (top-left/center/right, bottom-…), which Paged.js lays out per page.
-function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings: DocSettings): { all: string; first: string } {
+// Understand: a theme logo is part of the header — it only appears when the header is on, honours "skip first page", and
+// yields to any text the user puts in the right slot. Paged.js sizes margin boxes by their text, so the logo box needs a width.
+function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings: DocSettings, logo?: string): { all: string; first: string } {
   if (!slots) return { all: "", first: "" };
   const all: string[] = [];
   const first: string[] = [];
   for (const side of ["left", "center", "right"] as const) {
     const text = slots[side];
-    if (!text) continue;
-    all.push(`@${position}-${side} { content: ${slotContent(text, settings)}; }`);
-    if (slots.skipFirst) first.push(`@${position}-${side} { content: none; }`);
+    if (text) {
+      all.push(`@${position}-${side} { content: ${slotContent(text, settings)}; }`);
+    } else if (side === "right" && logo) {
+      all.push(`@${position}-right { content: ""; width: 30mm; background: url("${logo}") no-repeat right center / auto 9mm; }`);
+    } else continue;
+    if (slots.skipFirst) first.push(`@${position}-${side} { content: none; background: none; }`);
   }
   return { all: all.join("\n    "), first: first.join("\n    ") };
 }
@@ -41,9 +46,9 @@ function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings:
 // colours are baked in so the page stands alone; the user's colour overrides are left out (applied live by the app) so
 // recolouring never forces a re-pagination.
 // flow: Preview tab — renderDoc() -> composeFor(theme) -> compose() <-- HERE
-export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string; themeColors: Colors }): string {
-  const { settings, bodyHtml, themeCss, themeColors } = opts;
-  const header = marginBoxes("top", settings.header, settings);
+export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string; themeColors: Colors; themeLogo?: string }): string {
+  const { settings, bodyHtml, themeCss, themeColors, themeLogo } = opts;
+  const header = marginBoxes("top", settings.header, settings, themeLogo);
   const footer = marginBoxes("bottom", settings.footer, settings);
   const fonts = [...new Set([settings.fonts.body, settings.fonts.heading, settings.fonts.mono])]
     .map((name) => googleFontsUrl(name))
