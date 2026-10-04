@@ -1,7 +1,7 @@
 /* Shared by every theme: print mechanics + neutral defaults. Themes override vars and specifics.
    Paged.js caveat: never combine `+` with a pseudo-element (e.g. `h1 + p::first-letter`); use p.lead instead. */
 :root {
-  /* Palette: set live by the app on <html> from the theme's defaults or the front matter. */
+  /* Palette fallbacks. compose() sets the theme's colours; the app layers front-matter colours on top, live. */
   --text: #1c1917;
   --muted: #78716c;
   --quote: #44403c;
@@ -61,6 +61,7 @@ pre { background: var(--code-bg); padding: 0.8em 1em; border-radius: 6px; line-h
 pre code { background: none; padding: 0; font-size: 1em; }
 
 ul, ol { padding-left: 1.4em; margin: 0 0 0.75em; }
+li > ul, li > ol { margin: 0.2em 0 0; }
 li { margin: 0.2em 0; }
 li::marker { color: var(--accent); }
 

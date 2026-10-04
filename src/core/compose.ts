@@ -1,4 +1,4 @@
-import type { DocSettings, Slots } from "./config.ts";
+import type { Colors, DocSettings, Slots } from "./config.ts";
 import { fontStack, googleFontsUrl } from "./fonts.ts";
 
 const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\A ")}"`;
@@ -37,11 +37,12 @@ function marginBoxes(position: "top" | "bottom", slots: Slots | false, settings:
 
 // The problem is the preview iframe needs a complete, self-contained page: content, theme, page geometry, fonts and the paginator.
 // The way we solve this is to assemble one HTML string whose inline script waits for fonts and images, paginates, and reports the page count.
-// Understand: the output must be deterministic for the same inputs — the preview pool uses it as its cache key. Accent colour is
-// deliberately left out (applied live by the app) so recolouring never forces a re-pagination.
+// Understand: the output must be deterministic for the same inputs — the preview pool uses it as its cache key. The theme's own
+// colours are baked in so the page stands alone; the user's colour overrides are left out (applied live by the app) so
+// recolouring never forces a re-pagination.
 // flow: Preview tab — renderDoc() -> composeFor(theme) -> compose() <-- HERE
-export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string }): string {
-  const { settings, bodyHtml, themeCss } = opts;
+export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCss: string; themeColors: Colors }): string {
+  const { settings, bodyHtml, themeCss, themeColors } = opts;
   const header = marginBoxes("top", settings.header, settings);
   const footer = marginBoxes("bottom", settings.footer, settings);
   const fonts = [...new Set([settings.fonts.body, settings.fonts.heading, settings.fonts.mono])]
@@ -55,6 +56,10 @@ export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCs
     --font-body: ${fontStack(settings.fonts.body, "serif")};
     --font-heading: ${fontStack(settings.fonts.heading, "sans")};
     --font-mono: ${fontStack(settings.fonts.mono, "mono")};
+    --text: ${themeColors.text};
+    --muted: ${themeColors.muted};
+    --quote: ${themeColors.quote};
+    --accent: ${themeColors.accent};
   }
   @page {
     size: ${settings.page.size};

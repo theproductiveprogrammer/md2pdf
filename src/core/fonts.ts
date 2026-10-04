@@ -53,7 +53,7 @@ export function fontStack(name: string, slot: FontKind): string {
 }
 
 // Understand: one <link> per family, so a single unavailable font can't fail the whole request and take the others down with it.
-export function googleFontsUrl(name: string, weights = "ital,wght@0,400;0,600;0,700;1,400;1,700"): string | null {
+export function googleFontsUrl(name: string, weights = "ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,700"): string | null {
   const font = FONTS.find((f) => f.name === name);
   if (!font || font.stack) return null;
   return `https://fonts.googleapis.com/css2?family=${name.replace(/ /g, "+")}:${weights}&display=swap`;

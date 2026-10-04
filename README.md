@@ -99,7 +99,7 @@ title: Q3 Report            # defaults to the first "# Heading"
 author: Ada Ramirez
 date: October 3, 2026       # defaults to today
 lang: en                    # used for hyphenation and date format
-theme: modern               # modern | classic | academic | minimal | github | resume
+theme: modern               # modern | classic | academic | minimal | github | fsai | resume
 page:
   size: A4                  # A4, Letter, A5, Legal, "A4 landscape", or any CSS page size
   margin: 20mm              # any CSS margin, e.g. "22mm 18mm"
@@ -134,6 +134,7 @@ Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}` and `{p
 | **Academic** | Paper style: numbered sections, booktabs tables, numbered figures |
 | **Minimal** | One sans family, quiet hierarchy, generous whitespace |
 | **GitHub** | README look: system font, ruled headings, gridded and striped tables |
+| **FSAI** | Future Secure AI brand (Brand Guidelines V8): Montserrat only, black text, no italics (emphasis is Medium), black callouts and table heads, logo top-right on every page |
 | **Resume** | Compact one-pager: large name, ruled section labels, tight lists |
 
 **Fonts.** You can choose from 25 fonts:
@@ -178,13 +179,14 @@ src/app/               browser app (lit-html + CodeMirror)
   details.ts           Document form, synced with the front matter
   editor.ts            CodeMirror setup, image drop/paste
 src/themes/            base.css (print mechanics) + one CSS file per theme, registry in index.ts
-examples/              welcome.md, kitchen-sink.md, resume.md
+examples/              welcome.md, kitchen-sink.md, resume.md, fsai-report.md
 ```
 
 ### Adding a theme
 
 1. Create `src/themes/<name>.css`. Style elements with the palette variables (`--text`, `--muted`, `--quote`, `--accent`) and the font variables (`--font-body`, `--font-heading`, `--font-mono`). Never hard-code colours.
 2. Register it in `src/themes/index.ts` with its default fonts, colours, margins and header/footer.
+3. For a logo on every page, put the image in `src/themes/assets/`, import it with `?inline`, and add it with `logoInMargin()` (see the FSAI theme). The image is embedded in the theme CSS, so exported PDFs are self-contained.
 
 Paged.js limitation: it rewrites `A + B` selectors, which drops pseudo-elements. A rule like `h1 + p::first-letter` silently disappears. Use the `p.lead` class (the paragraph after an H1) instead.
 

@@ -6,6 +6,8 @@ import academic from "./academic.css?raw";
 import minimal from "./minimal.css?raw";
 import resume from "./resume.css?raw";
 import github from "./github.css?raw";
+import fsai from "./fsai.css?raw";
+import fsaiLogo from "./assets/fsai-logo.png?inline";
 
 export interface Theme {
   id: string;
@@ -15,6 +17,19 @@ export interface Theme {
 }
 
 export const DEFAULT_THEME = "modern";
+
+// The problem is FSAI documents carry the logo top-right on every page, per the brand guidelines.
+// The way we solve this is a background image in the top-right page margin box; the logo is inlined so the PDF is self-contained.
+// Understand: Paged.js sizes margin boxes by their text, and the logo box has none, so it needs an explicit width. It also sits
+// behind any text placed in the header's right slot, so the FSAI theme leaves that slot empty by default.
+const logoInMargin = (dataUri: string) => `
+@page {
+  @top-right {
+    content: "";
+    width: 30mm;
+    background: url("${dataUri}") no-repeat right center / auto 9mm;
+  }
+}`;
 
 export const THEMES: Theme[] = [
   {
@@ -71,6 +86,18 @@ export const THEMES: Theme[] = [
       footer: { center: "{page} / {pages}" },
       fonts: { body: "System", heading: "System", mono: "System Mono" },
       colors: { text: "#1f2328", muted: "#59636e", quote: "#59636e", accent: "#0969da" },
+    },
+  },
+  {
+    id: "fsai",
+    name: "FSAI",
+    css: base + fsai + logoInMargin(fsaiLogo),
+    defaults: {
+      page: { margin: "24mm 18mm 20mm" },
+      header: { left: "{title}" },
+      footer: { right: "{page}" },
+      fonts: { body: "Montserrat", heading: "Montserrat", mono: "System Mono" },
+      colors: { text: "#000000", muted: "#8c8c8c", quote: "#000000", accent: "#096c93" },
     },
   },
   {

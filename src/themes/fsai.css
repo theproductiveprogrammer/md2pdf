@@ -1,0 +1,77 @@
+/* FSAI — Future Secure AI brand (Brand Guidelines V8, Feb 2026).
+   Montserrat only; black text; no italics (emphasis is Medium); sentence-case headings (uppercase only for small labels);
+   black callouts and table heads; square corners; accent colours for tables and links, never body text. */
+:root {
+  --size-body: 10pt;
+  --leading: 1.45;
+  --rule: color-mix(in srgb, var(--text) 16%, white);
+  --code-bg: color-mix(in srgb, var(--text) 8%, white);
+}
+
+body { font-weight: 400; }
+p, li, blockquote, figcaption { hyphens: manual; font-variant-numeric: lining-nums proportional-nums; }
+p { margin: 0 0 0.8em; }
+
+/* No italics anywhere; emphasis is Medium, strong is Semibold. */
+em, i, cite, blockquote { font-style: normal; }
+em, i { font-weight: 500; }
+strong, b { font-weight: 600; }
+
+/* Type scale from the guidelines: 18pt semibold headings, 12pt paragraph headings, 10pt body. */
+h1, h2, h3, h4 { letter-spacing: 0; text-transform: none; color: var(--text); }
+h1 { font-size: 24pt; font-weight: 600; line-height: 1.15; margin: 0 0 0.6em; }
+h2 { font-size: 18pt; font-weight: 600; margin: 1.5em 0 0.5em; }
+h3 { font-size: 12pt; font-weight: 500; margin: 1.3em 0 0.4em; }
+/* The one allowed uppercase: small tertiary labels, like "TABLE OF CONTENTS". */
+h4 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin: 1.5em 0 0.5em; }
+p.lead { font-size: 11pt; }
+
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 0.06em; }
+
+/* Round bullets first, dash bullets for the second level. */
+ul { list-style: disc; }
+ul ul { list-style: "–  "; }
+li::marker { color: var(--text); }
+ol > li::marker { font-weight: 400; }
+
+/* Tip / note callouts: black box, white text, square corners. */
+blockquote {
+  background: var(--quote);
+  color: #fff;
+  border: 0;
+  padding: 0.9em 1.2em;
+  margin: 1.2em 0;
+  font-size: 9.5pt;
+  break-inside: avoid;
+}
+blockquote p { margin: 0.4em 0; }
+blockquote a, blockquote strong { color: #fff; }
+blockquote code { background: rgb(255 255 255 / 0.15); color: #fff; }
+
+/* Tables: black header row with small white uppercase labels, 8pt body, hairline row rules, no stripes. */
+table { font-size: 8pt; margin: 1.2em 0; }
+th {
+  background: var(--text);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 7.5pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 0;
+  padding: 0.7em 0.8em;
+}
+td { border-bottom: 1px solid var(--rule); padding: 0.6em 0.8em; }
+td:first-child { font-weight: 500; }
+
+/* Square corners everywhere (rounded boxes are off-brand). */
+code, pre, img { border-radius: 0; }
+code { background: var(--code-bg); }
+pre { background: var(--code-bg); }
+
+/* Citation size for captions. */
+figcaption { font-size: 7pt; text-align: left; color: var(--muted); }
+
+/* A short black rule, like the cover. */
+hr { border: 0; border-top: 1.5px solid var(--text); width: 12mm; margin: 1.6em 0; }
+
+.pagedjs_margin-content { font-family: var(--font-heading); font-size: 7.5pt; font-weight: 600; color: var(--muted); letter-spacing: 0; }
