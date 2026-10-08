@@ -15,7 +15,9 @@ md2pdf path/to/folder        # scratch pad; images resolve relative to that fold
 md2pdf                       # scratch pad; images resolve relative to the current folder
 ```
 
-Without `npm link`, use `npm run dev -- [path]`. The app opens at http://localhost:4848; if that port is taken it tries the next one. Pass `--no-open` to skip opening the browser.
+Without `npm link`, use `node server/index.ts [path]`. The app opens at http://localhost:4848; if that port is taken it tries the next one. Pass `--no-open` to skip opening the browser.
+
+md2pdf serves a pre-built copy of the app from `dist/`. It rebuilds automatically at startup, in about a second, whenever the source is newer than the last build; otherwise it starts instantly. If a tab was open across a rebuild, reload it.
 
 Requires Node 23.6 or newer, which runs the TypeScript server directly. Export works best in Chrome or another Chromium browser.
 
@@ -200,6 +202,9 @@ Paged.js limitation: it rewrites `A + B` selectors, which drops pseudo-elements.
 ## Development
 
 ```sh
-npm run dev -- examples/kitchen-sink.md   # run against the feature showcase
+npm run dev -- examples/kitchen-sink.md   # same as `md2pdf --dev`: Vite dev server with live reload
+npm run build                             # build dist/ by hand (md2pdf also does this when the source changes)
 npm run typecheck
 ```
+
+Use `--dev` only while changing md2pdf itself. Vite's dev server re-bundles dependencies on restarts and code changes, and an open tab still holding the old bundles fails with "504 Outdated Optimize Dep" until it's reloaded. That's why the normal command serves the built app instead.

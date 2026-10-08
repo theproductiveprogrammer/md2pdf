@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node server/index.ts",
+    "dev": "node server/index.ts --dev",
+    "build": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

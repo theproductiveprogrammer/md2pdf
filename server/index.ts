@@ -4,9 +4,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createServer as createVite } from "vite";
+import { build as viteBuild, createServer as createVite } from "vite";
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const DIST_DIR = path.join(APP_DIR, "dist");
+// Everything the built app is made from; if any of it is newer than the build, rebuild.
+const BUILD_INPUTS = ["src", "index.html", "examples/welcome.md", "package-lock.json"];
 const PAGED_POLYFILL = path.join(APP_DIR, "node_modules/pagedjs/dist/paged.polyfill.js");
 
 const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"]);
@@ -15,7 +18,7 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 const MIME: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
   ".webp": "image/webp", ".svg": "image/svg+xml", ".avif": "image/avif",
-  ".css": "text/css", ".js": "text/javascript", ".md": "text/markdown; charset=utf-8",
+  ".css": "text/css", ".js": "text/javascript", ".html": "text/html; charset=utf-8", ".json": "application/json", ".map": "application/json", ".md": "text/markdown; charset=utf-8",
   ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf",
 };
 
@@ -138,6 +141,43 @@ async function handleApi(root: string, doc: string | null, req: http.IncomingMes
   return false;
 }
 
+async function newestMtime(target: string): Promise<number> {
+  const stat = await fs.stat(target).catch(() => null);
+  if (!stat) return 0;
+  if (!stat.isDirectory()) return stat.mtimeMs;
+  const entries = await fs.readdir(target);
+  const times = await Promise.all(entries.map((e) => newestMtime(path.join(target, e))));
+  return Math.max(stat.mtimeMs, ...times);
+}
+
+// The problem is serving the app through Vite's dev server makes pages go blank with "504 Outdated Optimize Dep" whenever
+// Vite re-bundles its dependencies (after a restart or code change) while a tab still holds the old bundle versions.
+// The way we solve this is to serve a pre-built copy of the app, rebuilding it at startup only when the source is newer.
+// flow: terminal — user runs `md2pdf [file]` -> main() -> ensureBuilt() <-- HERE
+async function ensureBuilt() {
+  const built = await fs.stat(path.join(DIST_DIR, "index.html")).catch(() => null);
+  const newest = Math.max(...(await Promise.all(BUILD_INPUTS.map((p) => newestMtime(path.join(APP_DIR, p))))));
+  if (built && built.mtimeMs >= newest) return;
+  process.stdout.write("md2pdf  building the app (only after code changes)… ");
+  await viteBuild({ root: APP_DIR, logLevel: "warn", build: { outDir: DIST_DIR, emptyOutDir: true, chunkSizeWarningLimit: 4000 } });
+  console.log("done");
+}
+
+// Understand: hashed /assets/* files never change, so browsers may cache them forever; index.html must always be fresh so a
+// rebuild is picked up on the next reload.
+async function serveBuilt(req: http.IncomingMessage, res: http.ServerResponse) {
+  const pathname = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
+  const abs = safeResolve(DIST_DIR, pathname === "/" ? "index.html" : pathname.slice(1));
+  const file = abs && (await fs.readFile(abs).catch(() => null));
+  if (!abs || !file) return send(res, 404, "not found");
+  const immutable = pathname.startsWith("/assets/");
+  res.writeHead(200, {
+    "content-type": MIME[path.extname(abs).toLowerCase()] ?? "application/octet-stream",
+    "cache-control": immutable ? "public, max-age=31536000, immutable" : "no-store",
+  });
+  res.end(file);
+}
+
 // Understand: if the port is taken we walk up to the next one rather than failing, so two docs can be open at once.
 function listen(server: http.Server, port: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -149,31 +189,37 @@ function listen(server: http.Server, port: number): Promise<number> {
   });
 }
 
-// flow: terminal — user runs `npm run dev -- <folder|file>` -> main() <-- HERE
+// Understand: `--dev` runs the app through Vite's dev server with live reload, for working on md2pdf itself; everyone else
+// gets the pre-built app (see ensureBuilt).
+// flow: terminal — user runs `md2pdf [folder|file] [--dev] [--no-open]` -> main() <-- HERE
 async function main() {
   const args = process.argv.slice(2);
   const noOpen = args.includes("--no-open");
+  const dev = args.includes("--dev");
   const { root, doc } = await parseTarget(args.find((a) => !a.startsWith("--")));
 
   const server = http.createServer();
-  const vite = await createVite({
-    root: APP_DIR,
-    appType: "spa",
-    server: { middlewareMode: true, hmr: { server } },
-  });
+  let appHandler: (req: http.IncomingMessage, res: http.ServerResponse) => void | Promise<void>;
+  if (dev) {
+    const vite = await createVite({ root: APP_DIR, appType: "spa", server: { middlewareMode: true, hmr: { server } } });
+    appHandler = (req, res) => vite.middlewares(req, res);
+  } else {
+    await ensureBuilt();
+    appHandler = serveBuilt;
+  }
 
   server.on("request", async (req, res) => {
     try {
       if (await handleApi(root, doc, req, res)) return;
+      await appHandler(req, res);
     } catch (err) {
-      return send(res, 500, String(err));
+      send(res, 500, String(err));
     }
-    vite.middlewares(req, res);
   });
 
   const port = await listen(server, 4848);
   const url = `http://localhost:${port}/`;
-  console.log(`md2pdf  root: ${root}${doc ? `  doc: ${doc}` : ""}\n        ${url}`);
+  console.log(`md2pdf  root: ${root}${doc ? `  doc: ${doc}` : ""}${dev ? "  (dev mode)" : ""}\n        ${url}`);
   if (!noOpen) spawn("open", [url], { stdio: "ignore", detached: true }).unref();
 }
 
