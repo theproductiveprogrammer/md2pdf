@@ -15,6 +15,7 @@ export const PALETTES: Palette[] = [
   { name: "Crimson", text: "#1f1f1f", muted: "#4a4644", quote: "#6b5a5c", accent: "#b0293d" },
   { name: "Harbor", text: "#1f3b5e", muted: "#3c4658", quote: "#5a7189", accent: "#3e86c8" },
   { name: "Rust", text: "#262626", muted: "#4a4644", quote: "#6e5b50", accent: "#b5532a" },
+  { name: "Salesbox", text: "#1a0d26", muted: "#7a6890", quote: "#402d53", accent: "#ed457d" },
   { name: "Cherry", text: "#1c1c1e", muted: "#45454a", quote: "#6d5f63", accent: "#d63b4b" },
 ];
 

@@ -8,6 +8,8 @@ import resume from "./resume.css?raw";
 import github from "./github.css?raw";
 import fsai from "./fsai.css?raw";
 import fsaiLogo from "./assets/fsai-logo.png?inline";
+import salesbox from "./salesbox.css?raw";
+import salesboxLogo from "./assets/salesbox-logo-icon.svg?inline";
 
 export interface Theme {
   id: string;
@@ -87,6 +89,20 @@ export const THEMES: Theme[] = [
       colors: { text: "#000000", muted: "#8c8c8c", quote: "#000000", accent: "#096c93" },
       // The {logo} image (top-right of the header, per the brand guidelines); embedded so exported PDFs are self-contained.
       logo: fsaiLogo,
+    },
+  },
+  {
+    id: "salesbox",
+    name: "Salesbox",
+    css: base + salesbox,
+    defaults: {
+      page: { margin: "22mm 18mm 20mm" },
+      header: { left: "{logo}", right: "{title}" },
+      footer: { left: "salesbox.ai", right: "{page} / {pages}" },
+      fonts: { body: "Outfit", heading: "Outfit", mono: "JetBrains Mono" },
+      colors: { text: "#1a0d26", muted: "#7a6890", quote: "#402d53", accent: "#ed457d" },
+      // The salesbox.ai icon (indigo→pink gradient), embedded so exported PDFs are self-contained.
+      logo: salesboxLogo,
     },
   },
   {

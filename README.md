@@ -37,7 +37,7 @@ The form and the YAML front matter at the top of the file stay in sync both ways
 - **Theme**: click a theme to apply it, hover to preview it, or use `[` and `]` to cycle through them.
 - **Size and margins**: A4, Letter, A5, Legal, and landscape A4/Letter. Margins are Narrow, Normal, Wide or the theme default.
 - **Typeface**: each font is drawn in its own face. Filter by Sans, Serif or Mono, and apply it to body and headings together, either one alone, or code.
-- **Colours**: ten palettes, or set each of the four palette colours yourself.
+- **Colours**: eleven palettes, or set each of the four palette colours yourself.
 
 Every toolbar choice is written into the front matter, so the document carries its own look. **Export PDF** opens the print dialog. Choose **Save as PDF** to save exactly what the preview shows.
 
@@ -122,7 +122,7 @@ author: Ada Ramirez
 date: October 3, 2026       # defaults to today
 logo: ./assets/logo.png     # image for {logo}; relative to this file, or a URL. Defaults to the theme's logo, if any
 lang: en                    # used for hyphenation and date format
-theme: modern               # modern | classic | academic | minimal | github | fsai | resume
+theme: modern               # modern | classic | academic | minimal | github | fsai | salesbox | resume
 page:
   size: A4                  # A4, Letter, A5, Legal, "A4 landscape", or any CSS page size
   margin: 20mm              # any CSS margin, e.g. "22mm 18mm"
@@ -160,11 +160,12 @@ Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}`, `{page
 | **Minimal** | One sans family, quiet hierarchy, generous whitespace |
 | **GitHub** | README look: system font, ruled headings, gridded and striped tables |
 | **FSAI** | Future Secure AI brand (Brand Guidelines V8): Montserrat only, black text, no italics (emphasis is Medium), black callouts and table heads, logo top-right (`header.right: "{logo}"`) |
+| **Salesbox** | salesbox.ai brand on white paper: Outfit, deep-plum text, pink→magenta gradient accents, uppercase pill labels (`####`), rounded callout cards, logo top-left |
 | **Resume** | Compact one-pager: large name, ruled section labels, tight lists |
 
-**Fonts.** You can choose from 25 fonts:
+**Fonts.** You can choose from 26 fonts:
 - Serif: Source Serif 4, Libre Baskerville, Playfair Display, Merriweather, PT Serif, Crimson Text, Crimson Pro, EB Garamond, Lora
-- Sans: Roboto, Inter, Open Sans, Lato, Montserrat, Raleway, Poppins, IBM Plex Sans, Work Sans, Fira Sans, System
+- Sans: Roboto, Outfit, Inter, Open Sans, Lato, Montserrat, Raleway, Poppins, IBM Plex Sans, Work Sans, Fira Sans, System
 - Mono: JetBrains Mono, IBM Plex Mono, Inconsolata, Space Mono, System Mono
 
 Google fonts load on demand. **System** and **System Mono** use your operating system's fonts.
@@ -204,7 +205,7 @@ src/app/               browser app (lit-html + CodeMirror)
   details.ts           Document form, synced with the front matter
   editor.ts            CodeMirror setup, image drop/paste
 src/themes/            base.css (print mechanics) + one CSS file per theme, registry in index.ts
-examples/              welcome.md, kitchen-sink.md, resume.md, fsai-report.md
+examples/              welcome.md, kitchen-sink.md, resume.md, fsai-report.md, salesbox-brief.md
 ```
 
 ### Adding a theme

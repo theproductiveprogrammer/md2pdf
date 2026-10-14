@@ -21,6 +21,7 @@ export const FONTS: Font[] = [
   { name: "EB Garamond", kind: "serif", blurb: "Renaissance book face" },
   { name: "Lora", kind: "serif", blurb: "Calligraphic, warm serif" },
   { name: "Roboto", kind: "sans", blurb: "Familiar README look" },
+  { name: "Outfit", kind: "sans", blurb: "Geometric, friendly display sans" },
   { name: "Inter", kind: "sans", blurb: "Crisp, neutral UI sans" },
   { name: "Open Sans", kind: "sans", blurb: "Friendly and highly legible" },
   { name: "Lato", kind: "sans", blurb: "Friendly neutral sans" },
