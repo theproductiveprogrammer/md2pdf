@@ -80,6 +80,22 @@ The layout also keeps related content together:
 - `{width=…}` sets the size.
 - You can **drop or paste** an image into the editor. It's saved to `./assets/` and the link is inserted for you. A pasted screenshot gets a timestamped name, and existing files are never overwritten.
 
+### Math
+
+Use `$…$` for inline math and `$$…$$` for a display equation. Display equations can be on one line or span several lines:
+
+```md
+The energy is $E = mc^2$.
+
+$$S_{\text{node}} = \frac{\sum_{i \in E} w_i a_i f_i}{\sum_{i \in E} w_i} \times 100$$
+
+$$
+\frac{a}{b} = c
+$$
+```
+
+Equations render with KaTeX in both the preview and exported PDF. Math inside code spans and code blocks stays literal.
+
 ### Smart typography
 
 This is on by default. Code and code blocks are never touched.
@@ -160,7 +176,7 @@ Google fonts load on demand. **System** and **System Mono** use your operating s
 ```
 markdown + front matter
   → parseDoc / resolveSettings    built-in defaults < theme defaults < front matter
-  → renderMarkdown                markdown-it + typography, page breaks, figures, image paths, table hints
+  → renderMarkdown                markdown-it + KaTeX math, typography, page breaks, figures, image paths, table hints
   → compose                       full HTML: theme CSS, @page rules, header/footer margin boxes, fonts
   → preview iframe + Paged.js     splits the document into real pages; one cached iframe per theme
   → print()                       the browser's "Save as PDF" writes the file

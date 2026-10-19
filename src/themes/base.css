@@ -83,5 +83,8 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
 .pagebreak { break-after: page; height: 0; }
 .pagebreak + * { margin-top: 0; }
 
+/* Keep display equations together when paginating. */
+.katex-display { break-inside: avoid; }
+
 /* Running header/footer text (Paged.js margin boxes). */
 .pagedjs_margin-content { font-family: var(--font-heading); font-size: 8pt; color: var(--muted); letter-spacing: 0.02em; }

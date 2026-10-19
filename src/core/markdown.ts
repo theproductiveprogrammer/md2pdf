@@ -1,5 +1,6 @@
 import MarkdownIt from "markdown-it";
 import attrs from "markdown-it-attrs";
+import { katex } from "@mdit/plugin-katex";
 import type { MarkdownIt as Md, StateBlock } from "markdown-it";
 import { typographyPlugin } from "./typography.ts";
 
@@ -107,10 +108,11 @@ function tableKeepPlugin(md: Md) {
 }
 
 // The problem is turning the user's markdown into print-ready HTML with smart typography, page breaks and working images.
-// The way we solve this is markdown-it with typographer on, plus our pagebreak, typography, figure and image-path plugins.
+// The way we solve this is markdown-it with KaTeX, typographer, pagebreak, typography, figure and image-path plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
 export function renderMarkdown(body: string, opts: { docPath: string | null; typography: boolean }): string {
   const md = new MarkdownIt({ html: true, linkify: true, typographer: opts.typography })
+    .use(katex, { throwOnError: false })
     .use(attrs)
     .use(pagebreakPlugin)
     .use(typographyPlugin)

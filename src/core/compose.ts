@@ -1,5 +1,6 @@
 import type { Colors, DocSettings, Slots } from "./config.ts";
 import { fontStack, googleFontsUrl } from "./fonts.ts";
+import katexCss from "katex/dist/katex.min.css?inline";
 
 const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\A ")}"`;
 
@@ -90,6 +91,8 @@ export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCs
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${fonts}
 <style>${themeCss}</style>
+<!-- KaTeX needs no pagination rewriting; keep its font URLs out of Paged.js's about:srcdoc URL resolver. -->
+<style data-pagedjs-ignore>${katexCss}</style>
 <style>${pageCss}</style>
 <style media="screen">
   html, body { margin: 0; background: transparent; }
