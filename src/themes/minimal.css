@@ -1,9 +1,9 @@
 /* Minimal — one sans family, quiet hierarchy, lots of air. */
-:root { --size-body: 10pt; --leading: 1.65; --rule: color-mix(in srgb, var(--text) 10%, white); --code-bg: color-mix(in srgb, var(--text) 4%, white); }
+:root { --leading: 1.65; --rule: color-mix(in srgb, var(--text) 10%, white); --code-bg: color-mix(in srgb, var(--text) 4%, white); }
 p, li { font-variant-numeric: proportional-nums; }
-h1 { font-size: 22pt; font-weight: 600; letter-spacing: -0.025em; margin-bottom: 1.2em; }
-h2 { font-size: 12.5pt; font-weight: 600; letter-spacing: -0.01em; margin-top: 2.2em; }
-h3 { font-size: 10.5pt; font-weight: 600; }
+h1 { font-size: var(--size-h1); font-weight: 600; letter-spacing: -0.025em; margin-bottom: 1.2em; }
+h2 { font-size: var(--size-h2); font-weight: 600; letter-spacing: -0.01em; margin-top: 2.2em; }
+h3 { font-size: var(--size-h3); font-weight: 600; }
 h4 { font-size: 10pt; font-weight: 500; color: var(--muted); }
 blockquote { border-left-width: 1px; border-color: var(--text); color: var(--muted); }
 li::marker { color: var(--muted); }

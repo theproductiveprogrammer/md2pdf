@@ -1,10 +1,10 @@
 import { html, nothing } from "lit-html";
-import type { Colors, DocSettings, Overrides } from "../core/config.ts";
+import type { Colors, DocSettings, Overrides, Sizes } from "../core/config.ts";
 import { FONTS, googleFontsUrl, type FontKind } from "../core/fonts.ts";
 import { PALETTES, paletteMatches } from "../core/palettes.ts";
 import { THEMES, type Theme } from "../themes/index.ts";
 
-export type Popover = "fonts" | "colors" | null;
+export type Popover = "fonts" | "sizes" | "colors" | null;
 export type FontTarget = "both" | "body" | "heading" | "mono";
 export type FontFilter = "all" | FontKind;
 
@@ -122,6 +122,62 @@ function fontPicker(p: ToolbarProps) {
   `;
 }
 
+const SIZE_FIELDS: [keyof Sizes, string][] = [
+  ["body", "Body"],
+  ["h1", "Heading 1"],
+  ["h2", "Heading 2"],
+  ["h3", "Heading 3"],
+];
+
+const pt = (v: string) => parseFloat(v);
+
+// The problem is the user can swap typefaces but has no way to make the text bigger or smaller without editing YAML.
+// The way we solve this is a popover with a stepper per size: body, then the three heading levels. Changing the body alone
+// scales the headings with it (see resolveSizes), so one nudge usually does the job; a heading set here stays put.
+// flow: Preview tab — user opens Sizes and steps a value -> sizePicker() -> setSetting(sizes) <-- HERE
+function sizePicker(p: ToolbarProps) {
+  const s = p.settings;
+  const custom = p.overrides.sizes && Object.keys(p.overrides.sizes).length > 0;
+  const set = (key: keyof Sizes, raw: string) => {
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n) || n <= 0) return;
+    p.setSetting(["sizes", key], `${+n.toFixed(1)}pt`);
+  };
+  return html`
+    <div class="pop-wrap">
+      <button class="pop-trigger" aria-expanded=${p.popover === "sizes"} @click=${() => p.setPopover(p.popover === "sizes" ? null : "sizes")}>
+        <span class="aa">${pt(s.sizes.body)}pt</span> Sizes <span class="caret">▾</span>
+      </button>
+      ${p.popover === "sizes"
+        ? html`
+            <div class="pop sizes-pop" role="dialog" aria-label="Type sizes">
+              <div class="size-fields">
+                ${SIZE_FIELDS.map(
+                  ([key, label]) => html`
+                    <label class="size-field">
+                      <span>${label}</span>
+                      <span class="size-input">
+                        <input type="number" min="4" max="72" step="0.5" .value=${String(pt(s.sizes[key]))} @change=${(e: Event) => set(key, (e.target as HTMLInputElement).value)} />
+                        <span class="unit">pt</span>
+                        ${p.overrides.sizes?.[key]
+                          ? html`<button class="reset" title="Back to the theme's size" @click=${() => p.setSetting(["sizes", key], undefined)}>×</button>`
+                          : nothing}
+                      </span>
+                    </label>
+                  `,
+                )}
+              </div>
+              <button class="font-card theme-default" ?disabled=${!custom} @click=${() => p.setSetting(["sizes"], undefined)}>
+                <span class="font-name">Theme default</span>
+                <span class="font-blurb">${p.theme.name}'s own sizes · ${pt(p.theme.defaults.sizes.body)}pt body</span>
+              </button>
+            </div>
+          `
+        : nothing}
+    </div>
+  `;
+}
+
 const dots = (c: Colors) => html`
   <span class="dots">${[c.text, c.muted, c.quote, c.accent].map((v) => html`<i style="background:${v}"></i>`)}</span>
 `;
@@ -184,7 +240,7 @@ function colourPicker(p: ToolbarProps) {
   `;
 }
 
-// The problem is the user wants to try looks quickly — themes, paper, margins, fonts, colour — against the real pages.
+// The problem is the user wants to try looks quickly — themes, paper, margins, fonts, sizes, colour — against the real pages.
 // Content options (header/footer, chapter breaks, typography) live in the Document form on the Write tab instead.
 // The way we solve this is a toolbar whose every control writes into the front matter; hovering a theme previews it without committing.
 // flow: Preview tab — user changes any control -> toolbar() -> setSetting() <-- HERE
@@ -226,6 +282,6 @@ export function toolbar(p: ToolbarProps) {
         ${margin && !marginKnown ? html`<option value=${margin} .selected=${true}>Custom · ${margin}</option>` : nothing}
       </select>
     </label>
-    ${fontPicker(p)} ${colourPicker(p)}
+    ${fontPicker(p)} ${sizePicker(p)} ${colourPicker(p)}
   `;
 }

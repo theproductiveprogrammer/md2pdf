@@ -66,6 +66,10 @@ export function compose(opts: { bodyHtml: string; settings: DocSettings; themeCs
     --font-body: ${fontStack(settings.fonts.body, "serif")};
     --font-heading: ${fontStack(settings.fonts.heading, "sans")};
     --font-mono: ${fontStack(settings.fonts.mono, "mono")};
+    --size-body: ${settings.sizes.body};
+    --size-h1: ${settings.sizes.h1};
+    --size-h2: ${settings.sizes.h2};
+    --size-h3: ${settings.sizes.h3};
     --text: ${themeColors.text};
     --muted: ${themeColors.muted};
     --quote: ${themeColors.quote};

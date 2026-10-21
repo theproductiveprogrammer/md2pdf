@@ -16,6 +16,14 @@ export interface Colors {
   accent: string;
 }
 
+// Type sizes in CSS units (pt). Body is the base; headings default to the theme's own, scaled if the body size changes.
+export interface Sizes {
+  body: string;
+  h1: string;
+  h2: string;
+  h3: string;
+}
+
 export interface DocSettings {
   title: string;
   author: string;
@@ -28,6 +36,7 @@ export interface DocSettings {
   breakBeforeH1: boolean;
   typography: boolean;
   fonts: { body: string; heading: string; mono: string };
+  sizes: Sizes;
   colors: Colors;
   // Image for the {logo} placeholder: a path relative to the document, a URL, or a theme's built-in data URI. Null = none.
   logo: string | null;
@@ -40,6 +49,7 @@ export interface ThemeDefaults {
   footer?: Slots | false;
   breakBeforeH1?: boolean;
   fonts: DocSettings["fonts"];
+  sizes: Sizes;
   colors: Colors;
   // Built-in logo (data URI) for the {logo} placeholder; the document's own `logo:` setting replaces it.
   logo?: string;
@@ -58,6 +68,7 @@ export interface Overrides {
   breakBeforeH1?: boolean;
   typography?: boolean;
   fonts?: Partial<DocSettings["fonts"]>;
+  sizes?: Partial<Sizes>;
   colors?: Partial<DocSettings["colors"]>;
   logo?: string;
 }
@@ -84,6 +95,27 @@ const pick = <T extends object>(v: unknown, keys: (keyof T)[]): Partial<T> | und
   }
   return out;
 };
+
+// A bare number in YAML (`body: 11`) means points; anything else is taken as a CSS length.
+const sizes = (v: unknown): Partial<Sizes> | undefined => {
+  const out = pick<Sizes>(v, ["body", "h1", "h2", "h3"]);
+  if (!out) return undefined;
+  for (const k of Object.keys(out) as (keyof Sizes)[]) if (/^\d+(\.\d+)?$/.test(out[k]!)) out[k] = `${out[k]}pt`;
+  return out;
+};
+
+const pt = (v: string) => parseFloat(v);
+
+// The problem is a user who bumps the body size expects the headings to grow with it, not stay at the theme's fixed points.
+// The way we solve this is to scale each heading the user didn't set by the ratio of the new body size to the theme's.
+// Understand: only when both sizes are in the same unit can we scale; mixed units fall back to the theme's heading size.
+function resolveSizes(theme: Sizes, o: Partial<Sizes> | undefined): Sizes {
+  const body = o?.body ?? theme.body;
+  const unit = (v: string) => v.replace(/^[\d.]+/, "");
+  const ratio = unit(body) === unit(theme.body) && pt(theme.body) > 0 ? pt(body) / pt(theme.body) : 1;
+  const scaled = (k: "h1" | "h2" | "h3") => o?.[k] ?? (ratio === 1 ? theme[k] : `${+(pt(theme[k]) * ratio).toFixed(1)}${unit(theme[k])}`);
+  return { body, h1: scaled("h1"), h2: scaled("h2"), h3: scaled("h3") };
+}
 
 const slots = (v: unknown): Slots | false | undefined => (v === false ? false : v && typeof v === "object" ? (v as Slots) : undefined);
 
@@ -122,6 +154,7 @@ export function parseDoc(source: string, fileName: string | null): ParsedDoc {
       breakBeforeH1: typeof meta.breakBeforeH1 === "boolean" ? meta.breakBeforeH1 : undefined,
       typography: typeof meta.typography === "boolean" ? meta.typography : undefined,
       fonts: pick(meta.fonts, ["body", "heading", "mono"]),
+      sizes: sizes(meta.sizes),
       colors: pick(meta.colors, ["text", "muted", "quote", "accent"]),
       logo: str(meta.logo),
     },
@@ -147,6 +180,7 @@ export function resolveSettings(parsed: ParsedDoc, themeId: string, theme: Theme
     breakBeforeH1: o.breakBeforeH1 ?? theme.breakBeforeH1 ?? false,
     typography: o.typography ?? true,
     fonts: { ...theme.fonts, ...o.fonts },
+    sizes: resolveSizes(theme.sizes, o.sizes),
     colors: { ...theme.colors, ...o.colors },
     logo: o.logo || theme.logo || null,
   };

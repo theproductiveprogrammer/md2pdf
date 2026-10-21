@@ -12,6 +12,9 @@
   --stripe: color-mix(in srgb, var(--text) 3%, white);
   --head-bg: color-mix(in srgb, var(--accent) 9%, white);
   --size-body: 10.5pt;
+  --size-h1: 24pt;
+  --size-h2: 15pt;
+  --size-h3: 12pt;
   --leading: 1.55;
 }
 
@@ -44,9 +47,9 @@ h1, h2, h3, h4, h5, h6 {
   break-after: avoid;
   break-inside: avoid;
 }
-h1 { font-size: 24pt; margin: 0 0 0.6em; }
-h2 { font-size: 15pt; margin: 1.6em 0 0.5em; }
-h3 { font-size: 12pt; margin: 1.3em 0 0.4em; }
+h1 { font-size: var(--size-h1); margin: 0 0 0.6em; }
+h2 { font-size: var(--size-h2); margin: 1.6em 0 0.5em; }
+h3 { font-size: var(--size-h3); margin: 1.3em 0 0.4em; }
 h4 { font-size: 1em; margin: 1.2em 0 0.3em; }
 
 a { color: var(--accent); text-decoration-thickness: 0.06em; text-underline-offset: 0.15em; }

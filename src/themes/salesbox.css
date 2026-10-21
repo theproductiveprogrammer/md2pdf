@@ -1,7 +1,6 @@
 /* Salesbox — salesbox.ai brand adapted for white paper: Outfit throughout, deep-plum ink, hot-pink accent fading to
    magenta, uppercase pill labels, rounded cards. Outfit has no italics, so emphasis is Medium weight (as on the site). */
 :root {
-  --size-body: 10pt;
   --leading: 1.55;
   /* The pink→magenta sweep, derived from the accent so palettes still recolour it. */
   --accent-2: color-mix(in srgb, var(--accent) 55%, #9b2fd9);
@@ -17,12 +16,12 @@ em, i { font-style: normal; font-weight: 500; color: var(--quote); }
 strong, b { font-weight: 600; }
 
 h1, h2, h3 { color: var(--text); }
-h1 { font-size: 26pt; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 0.35em; }
+h1 { font-size: var(--size-h1); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 0.35em; }
 /* Gradient bar under the title. */
 h1::after { content: ""; display: block; width: 18mm; height: 3px; border-radius: 2px; background: var(--gradient); margin-top: 0.3em; }
 p.lead { font-size: 11.5pt; color: var(--muted); margin-top: 0.8em; }
-h2 { font-size: 16pt; font-weight: 700; letter-spacing: -0.015em; margin: 1.6em 0 0.5em; }
-h3 { font-size: 12pt; font-weight: 600; margin: 1.3em 0 0.4em; }
+h2 { font-size: var(--size-h2); font-weight: 700; letter-spacing: -0.015em; margin: 1.6em 0 0.5em; }
+h3 { font-size: var(--size-h3); font-weight: 600; margin: 1.3em 0 0.4em; }
 /* Eyebrow labels: small, uppercase, widely tracked, in an outlined pink pill — the site's signature label. */
 h4 {
   display: inline-block;

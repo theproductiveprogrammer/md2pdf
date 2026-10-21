@@ -138,6 +138,11 @@ fonts:
   body: Source Serif 4
   heading: Inter
   mono: JetBrains Mono
+sizes:                      # points; a bare number means pt. Headings you leave out scale with the body
+  body: 10.5
+  h1: 24
+  h2: 15
+  h3: 12
 colors:
   text: "#1c1917"           # body copy and headings
   muted: "#78716c"          # secondary: captions, header/footer, labels
@@ -169,6 +174,8 @@ Header and footer text can use `{title}`, `{author}`, `{date}`, `{page}`, `{page
 - Mono: JetBrains Mono, IBM Plex Mono, Inconsolata, Space Mono, System Mono
 
 Google fonts load on demand. **System** and **System Mono** use your operating system's fonts.
+
+**Sizes.** Each theme sets a body size and three heading sizes. Change the body and the headings you haven't set scale with it, so `sizes: { body: 12 }` makes the whole document a step larger; set `h1`/`h2`/`h3` too to pin a heading. Everything else (code, tables, captions) is relative to the body.
 
 **Colours.** Every colour in every theme comes from the four palette colours. Borders, code backgrounds and table stripes are mixed from them, so a palette recolours the whole document. Colours inside images can't change.
 
