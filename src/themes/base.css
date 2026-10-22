@@ -76,7 +76,17 @@ th, td { padding: 0.35em 0.6em; font-variant-numeric: lining-nums tabular-nums; 
 th { text-align: left; font-weight: 600; border-bottom: 1.5px solid var(--text); }
 td { border-bottom: 1px solid var(--rule); }
 
-img { max-width: 100%; height: auto; display: block; margin: 1em auto; break-inside: avoid; }
+/* An image taller than the page can't be kept whole, and Paged.js then leaves a blank page and cuts it off. Cap its height
+   to the page's content area, less room for a caption and the figure's margins; the browser scales width to match. */
+img {
+  max-width: 100%;
+  max-height: calc(var(--pagedjs-pagebox-height, 297mm) - var(--pagedjs-margin-top, 20mm) - var(--pagedjs-margin-bottom, 20mm) - 5em);
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+  break-inside: avoid;
+}
 figure { margin: 1.4em 0; break-inside: avoid; }
 figure img { margin: 0 auto; }
 figcaption { margin-top: 0.6em; text-align: center; font-size: 0.85em; color: var(--muted); }
