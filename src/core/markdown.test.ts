@@ -36,3 +36,11 @@ test("invalid TeX does not prevent the rest of the document from rendering", () 
   assert.match(html, /Following/);
   assert.ok(html.includes(String.raw`\notARealCommand`));
 });
+
+test("keeps short code blocks whole but lets long ones split across pages", () => {
+  const block = (n: number) => "```\n" + Array.from({ length: n }, (_, i) => `line ${i}`).join("\n") + "\n```";
+  assert.match(render(block(20)), /^<pre class="keep-together"><code>/);
+  assert.match(render("```js\nconst x = 1;\n```"), /^<pre class="keep-together"><code class="language-js">/);
+  assert.match(render("    indented code"), /^<pre class="keep-together">/);
+  assert.match(render(block(21)), /^<pre><code>/);
+});

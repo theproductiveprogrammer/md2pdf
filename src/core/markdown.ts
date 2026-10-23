@@ -107,8 +107,25 @@ function tableKeepPlugin(md: Md) {
   });
 }
 
+const KEEP_TOGETHER_MAX_CODE_LINES = 20;
+
+// The problem is Paged.js can crash laying out a long code block it's told never to split, and the preview then shows nothing.
+// The way we solve this is to let code blocks split across pages by default, and only mark short ones (≤ 20 lines) to stay in one piece.
+// Understand: markdown-it puts a fence's attributes on the inner <code>, so the class is added to the <pre> in the rendered HTML.
+// flow: Preview tab — user switches to Preview -> renderMarkdown() -> codeKeepPlugin <-- HERE
+function codeKeepPlugin(md: Md) {
+  for (const rule of ["fence", "code_block"] as const) {
+    const render = md.renderer.rules[rule]!;
+    md.renderer.rules[rule] = (tokens, idx, ...rest) => {
+      const html = render(tokens, idx, ...rest);
+      const lines = tokens[idx].content.replace(/\n$/, "").split("\n").length;
+      return lines <= KEEP_TOGETHER_MAX_CODE_LINES ? html.replace(/^<pre(?=[\s>])/, '<pre class="keep-together"') : html;
+    };
+  }
+}
+
 // The problem is turning the user's markdown into print-ready HTML with smart typography, page breaks and working images.
-// The way we solve this is markdown-it with KaTeX, typographer, pagebreak, typography, figure and image-path plugins.
+// The way we solve this is markdown-it with KaTeX, typographer, pagebreak, typography, figure, keep-together and image-path plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
 export function renderMarkdown(body: string, opts: { docPath: string | null; typography: boolean }): string {
   const md = new MarkdownIt({ html: true, linkify: true, typographer: opts.typography })
@@ -119,6 +136,7 @@ export function renderMarkdown(body: string, opts: { docPath: string | null; typ
     .use(figurePlugin)
     .use(leadParagraphPlugin)
     .use(tableKeepPlugin)
+    .use(codeKeepPlugin)
     .use(resolveImagesPlugin, opts.docPath);
   return md.render(body);
 }
