@@ -11,9 +11,11 @@ npm install
 npm link                     # optional: installs the `md2pdf` command
 
 md2pdf path/to/report.md     # edit a file; ⌘S saves it back
-md2pdf path/to/folder        # scratch pad; images resolve relative to that folder
-md2pdf                       # scratch pad; images resolve relative to the current folder
+md2pdf path/to/folder        # browse that folder's markdown files and open any of them
+md2pdf                       # browse the current folder
 ```
+
+Each file opens in its own tab at `?doc=path/to/file.md`. Click **md2pdf** in the top bar to get back to the file browser, which also offers a **Scratch pad**: an unsaved document kept in the browser. Files can't be opened from outside the launch folder.
 
 Without `npm link`, use `node server/index.ts [path]`. The app opens at http://localhost:4848; if that port is taken it tries the next one. Pass `--no-open` to skip opening the browser.
 
@@ -51,6 +53,12 @@ The preview re-renders in the background shortly after you stop typing, and the 
 | Esc | Close an open picker |
 
 ## Writing
+
+### Links
+
+- `[Intro](#1-intro)` jumps to a heading. Headings get GitHub-style ids: `## 1. Intro` becomes `#1-intro`, and repeated headings get `-1`, `-2` and so on. Write `## Intro {#my-id}` to choose an id yourself. These links stay clickable in the exported PDF.
+- `[Site](https://…)` opens in a new tab from the preview and stays a link in the PDF.
+- `[Notes](./notes.md)` and other local files open in a new tab from the preview: markdown in a new md2pdf editor, anything else as the raw file. In the PDF they print as plain text, because a link to a file on your disk can't work there.
 
 ### Page breaks
 

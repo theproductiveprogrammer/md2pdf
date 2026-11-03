@@ -1,3 +1,9 @@
+import { appUrlFor, isExternal, resolveLocal } from "../core/links.ts";
+
+// How far down the document the reader is, 0–1; a ratio rather than pixels so it survives a theme switch.
+const scrollRatio = (w: Window) => w.scrollY / Math.max(1, w.document.documentElement.scrollHeight - w.innerHeight);
+const scrollToRatio = (w: Window, ratio: number) => w.scrollTo(0, ratio * (w.document.documentElement.scrollHeight - w.innerHeight));
+
 export type RenderResult = { pages: number } | { error: string };
 
 interface Slot {
@@ -16,9 +22,29 @@ export class PreviewPool {
   private varsFor: (id: string) => Record<string, string> = () => ({});
 
   private host: HTMLElement;
+  readonly docPath: () => string | null;
 
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, docPath: () => string | null) {
     this.host = host;
+    this.docPath = docPath;
+    window.addEventListener("popstate", (e) => {
+      const ratio = (e.state as { previewScroll?: number } | null)?.previewScroll;
+      const w = this.host.querySelector<HTMLIFrameElement>("iframe.shown")?.contentWindow;
+      if (typeof ratio === "number" && w) scrollToRatio(w, ratio);
+    });
+  }
+
+  // The problem is a reader who follows a contents link expects Back to return them to where they were, not leave the app.
+  // The way we solve this is to remember the scroll position on the current history entry, jump, then push a new entry;
+  // the popstate listener in the constructor scrolls back to whichever entry the browser returns to.
+  // flow: Preview tab — user clicks an in-page #link -> followLink() -> pool.jump() <-- HERE
+  jump(frame: HTMLIFrameElement, id: string) {
+    const w = frame.contentWindow;
+    const target = frame.contentDocument?.getElementById(id);
+    if (!w || !target) return;
+    history.replaceState({ ...history.state, previewScroll: scrollRatio(w) }, "");
+    target.scrollIntoView({ block: "start" });
+    history.pushState({ previewScroll: scrollRatio(w) }, "", `#${encodeURIComponent(id)}`);
   }
 
   private slot(id: string): Slot {
@@ -59,6 +85,9 @@ export class PreviewPool {
         const old = s.frame;
         Object.assign(s, { frame, html, result, pending: null });
         this.applyVarsTo(id, frame);
+        const doc = frame.contentDocument;
+        doc?.addEventListener("click", (ev) => followLink(ev, frame, this));
+        doc?.addEventListener("auxclick", (ev) => followLink(ev, frame, this));
         if (this.shownId === id) this.reveal(frame);
         old?.remove();
         resolve(result);
@@ -86,8 +115,7 @@ export class PreviewPool {
     const p = prev?.contentWindow;
     const n = next.contentWindow;
     if (prev && prev !== next && p && n) {
-      const ratio = p.scrollY / Math.max(1, p.document.documentElement.scrollHeight - p.innerHeight);
-      n.scrollTo(0, ratio * (n.document.documentElement.scrollHeight - n.innerHeight));
+      scrollToRatio(n, scrollRatio(p));
     }
     for (const f of this.host.querySelectorAll("iframe.shown")) if (f !== next) f.classList.remove("shown");
     next.classList.add("shown");
@@ -123,4 +151,25 @@ export class PreviewPool {
     frame.contentWindow.print();
     document.title = previous;
   }
+}
+
+// The problem is the preview frame borrows the app's address, so letting a link navigate it loads a second copy of the app
+// inside the preview (or a 404, or a site that refuses to be framed).
+// The way we solve this is to never let the frame navigate: #links scroll within it, everything else opens in a new tab.
+// Understand: local links arrive as data-local (see localLinksPlugin); a raw-HTML <a href="./x.md"> is resolved here too.
+// flow: Preview tab — user clicks a link in the paginated document -> followLink() <-- HERE
+function followLink(ev: MouseEvent, frame: HTMLIFrameElement, pool: PreviewPool) {
+  const a = (ev.target as Element | null)?.closest?.("a");
+  if (!a || (ev.type === "auxclick" && ev.button !== 1)) return;
+  const local = a.getAttribute("data-local");
+  const href = a.getAttribute("href");
+  if (local == null && href == null) return;
+  ev.preventDefault();
+  if (href?.startsWith("#")) {
+    if (ev.type === "auxclick") return;
+    return pool.jump(frame, decodeURIComponent(href.slice(1)));
+  }
+  if (href && isExternal(href)) return void window.open(href, "_blank", "noopener");
+  const path = local ?? resolveLocal(href!, pool.docPath());
+  if (path != null) window.open(appUrlFor(path), "_blank");
 }

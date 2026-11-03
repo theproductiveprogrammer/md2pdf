@@ -8,6 +8,7 @@ import { createEditor } from "./editor.ts";
 import { PreviewPool, type RenderResult } from "./preview.ts";
 import { toolbar, type FontFilter, type FontTarget, type Popover } from "./toolbar.ts";
 import { details } from "./details.ts";
+import { showBrowser } from "./browser.ts";
 import sample from "../../examples/welcome.md?raw";
 
 type Tab = "write" | "preview";
@@ -18,6 +19,7 @@ const RENDER_DEBOUNCE_MS = 400;
 
 const state = {
   docPath: null as string | null,
+  newFile: false,
   text: "",
   savedText: "",
   tab: "write" as Tab,
@@ -40,7 +42,8 @@ const writePane = document.getElementById("write")!;
 const detailsHost = document.getElementById("details")!;
 const editorHost = document.getElementById("editor")!;
 const previewPane = document.getElementById("preview")!;
-const pool = new PreviewPool(previewPane);
+const browseHost = document.getElementById("browse")!;
+const pool = new PreviewPool(previewPane, () => state.docPath);
 let editor: EditorView;
 let renderTimer: number | undefined;
 let generation = 0;
@@ -63,15 +66,33 @@ function writeStored(key: string, value: string) {
 
 const docDir = () => (state.docPath?.includes("/") ? state.docPath.slice(0, state.docPath.lastIndexOf("/")) : "");
 
-// The problem is the app can be launched on a .md file (edit it in place) or on a folder (scratch pad).
-// The way we solve this is to ask the server which doc it was started with and fall back to the last draft or the welcome sample.
-// flow: app start -> main() -> loadSession() <-- HERE
-async function loadSession(): Promise<void> {
-  const session = (await (await fetch("/api/session")).json()) as { doc: string | null };
-  state.docPath = session.doc;
-  if (session.doc) {
-    const res = await fetch(`/api/doc?path=${encodeURIComponent(session.doc)}`);
+type Route = { view: "browse"; dir: string; rootName: string } | { view: "edit"; doc: string | null };
+
+// The problem is each browser tab should show one thing — a folder listing, a file, or the scratch pad — and links between
+// files must be able to open a specific one.
+// The way we solve this is the address: ?dir=folder lists it, ?doc=file.md edits it, ?draft is the scratch pad; a bare
+// address opens the file md2pdf was launched on, or the launch folder's listing.
+// flow: app start -> main() -> route() <-- HERE
+async function route(): Promise<Route> {
+  const params = new URLSearchParams(location.search);
+  const session = (await (await fetch("/api/session")).json()) as { root: string; doc: string | null };
+  const rootName = session.root.split(/[\\/]/).pop() || session.root;
+  if (params.has("doc")) return { view: "edit", doc: params.get("doc") };
+  if (params.has("draft")) return { view: "edit", doc: null };
+  if (params.has("dir") || !session.doc) return { view: "browse", dir: params.get("dir") ?? "", rootName };
+  return { view: "edit", doc: session.doc };
+}
+
+// The problem is the editor opens either a file on disk (edit it in place) or the scratch pad.
+// The way we solve this is to fetch the file, or fall back to the last draft or the welcome sample for the scratch pad.
+// Understand: a missing file opens empty and ⌘S creates it, so a link to a not-yet-written note still works.
+// flow: app start -> main() -> loadDoc() <-- HERE
+async function loadDoc(doc: string | null): Promise<void> {
+  state.docPath = doc;
+  if (doc) {
+    const res = await fetch(`/api/doc?path=${encodeURIComponent(doc)}`);
     state.text = res.ok ? await res.text() : "";
+    state.newFile = res.status === 404;
   } else {
     state.text = readStored(DRAFT_KEY) ?? sample;
   }
@@ -85,7 +106,7 @@ async function saveDoc() {
   if (!state.docPath) return;
   const text = state.text;
   const res = await fetch(`/api/doc?path=${encodeURIComponent(state.docPath)}`, { method: "PUT", body: text });
-  if (res.ok) state.savedText = text;
+  if (res.ok) Object.assign(state, { savedText: text, newFile: false });
   else state.error = `Save failed: ${res.status}`;
   draw();
 }
@@ -270,10 +291,10 @@ function draw() {
   const result = pool.resultOf(shown);
   render(
     html`
-      <span class="brand">md2pdf</span>
+      <a class="brand" href=${`/?dir=${encodeURIComponent(docDir())}`} title="Browse files">md2pdf</a>
       <span class="doc-title">${state.settings?.title ?? ""}</span>
       <span class="file" title=${state.docPath ? `Saving to ${state.docPath}` : "Not linked to a file — autosaved in this browser"}>
-        ${state.docPath ?? "unsaved draft"}${dirty ? html`<span class="dirty">●</span>` : null}
+        ${state.docPath ?? "unsaved draft"}${state.newFile ? " (new — ⌘S creates it)" : ""}${dirty ? html`<span class="dirty">●</span>` : null}
       </span>
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected=${state.tab === "write"} @click=${() => setTab("write")}>Write</button>
@@ -322,12 +343,20 @@ function draw() {
 
 // flow: app start — user opens http://localhost:4848 -> main() <-- HERE
 async function main() {
-  await loadSession();
+  const where = await route();
+  if (where.view === "browse") return showBrowser(where.dir, where.rootName, bar, browseHost);
+  document.body.dataset.view = "edit";
+  await loadDoc(where.doc);
+  document.title = `${state.docPath?.split("/").pop() ?? "Scratch pad"} — md2pdf`;
   state.detailsOpen = readStored(DETAILS_OPEN_KEY) !== "0";
   refreshParsed();
   editor = createEditor(editorHost, state.text, { onChange: onEdit, onToggle: toggleTab, onSave: saveDoc, uploadImage });
   document.addEventListener("pointerdown", (e) => {
     if (state.popover && !(e.target as HTMLElement).closest?.(".pop-wrap")) setPopover(null);
+  });
+  // Each file opens in its own tab, so leaving one (logo, Back, closing) must not silently drop unsaved edits.
+  window.addEventListener("beforeunload", (e) => {
+    if (state.docPath && state.text !== state.savedText) e.preventDefault();
   });
   // Clicks inside the preview iframe never reach this document, but they do take focus away from it.
   window.addEventListener("blur", () => state.popover && setPopover(null));

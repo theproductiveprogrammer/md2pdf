@@ -284,3 +284,27 @@ body:not([data-tab="preview"]) #tools { display: none; }
 .colour-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .colour-field { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; }
 .colour-field input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+
+/* File browser (?dir=…) and editor (?doc=…) are separate views of the same page. */
+body:not([data-view="edit"]) #tools,
+body:not([data-view="edit"]) main { display: none; }
+body:not([data-view="browse"]) #browse { display: none; }
+a.brand { color: inherit; text-decoration: none; }
+a.brand:hover { color: var(--accent); }
+a.primary { text-decoration: none; }
+
+#browse { flex: 1; overflow: auto; padding: 24px 16px 64px; }
+.crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.crumbs a { color: var(--text); text-decoration: none; }
+.crumbs a:hover { color: var(--accent); }
+.crumbs a:last-child { font-weight: 600; }
+.crumb-sep { color: var(--muted); }
+.listing { list-style: none; margin: 0 auto; padding: 0; max-width: 720px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.listing:empty { display: none; }
+.listing li + li { border-top: 1px solid var(--line); }
+.listing a { display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: var(--text); text-decoration: none; font-size: 14px; }
+.listing a:hover { background: var(--bg); color: var(--accent); }
+.listing a::before { width: 16px; text-align: center; color: var(--muted); }
+.listing a.dir::before { content: "▸"; }
+.listing a.md::before { content: "¶"; }
+.note { max-width: 720px; margin: 16px auto; color: var(--muted); text-align: center; }

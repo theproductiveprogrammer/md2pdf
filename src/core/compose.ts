@@ -98,6 +98,11 @@ ${fonts}
 <!-- KaTeX needs no pagination rewriting; keep its font URLs out of Paged.js's about:srcdoc URL resolver. -->
 <style data-pagedjs-ignore>${katexCss}</style>
 <style>${pageCss}</style>
+<!-- Links to local files (data-local) can't work in a PDF: clickable on screen, plain text when printed. -->
+<style data-pagedjs-ignore>
+  a[data-local] { cursor: pointer; }
+  @media print { a[data-local] { color: inherit !important; text-decoration: none !important; border: 0 !important; } }
+</style>
 <style media="screen">
   html, body { margin: 0; background: transparent; }
   .pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 32px 0 64px; }

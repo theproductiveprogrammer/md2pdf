@@ -3,6 +3,7 @@ import attrs from "markdown-it-attrs";
 import { katex } from "@mdit/plugin-katex";
 import type { MarkdownIt as Md, StateBlock } from "markdown-it";
 import { typographyPlugin } from "./typography.ts";
+import { docDirOf, resolveLocal, slugify } from "./links.ts";
 
 const PAGEBREAK_LINE = /^(\\pagebreak|\\newpage|<!--\s*pagebreak\s*-->)\s*$/;
 
@@ -28,8 +29,6 @@ function pagebreakPlugin(md: Md) {
   );
 }
 
-const docDirOf = (docPath: string | null) => (docPath?.includes("/") ? docPath.slice(0, docPath.lastIndexOf("/") + 1) : "");
-
 // The problem is `./img.png` in a document means "next to the .md file", but the preview page lives at a different URL.
 // The way we solve this is to rewrite relative paths to /files/<doc folder>/..., which the local server reads from disk;
 // URLs, data URIs and absolute paths pass through untouched.
@@ -46,6 +45,47 @@ function resolveImagesPlugin(md: Md, docPath: string | null) {
         if (t.type === "image") t.attrSet("src", assetUrl(String(t.attrGet("src") ?? ""), docPath));
       }
     }
+  });
+}
+
+// The problem is a link to a sibling file (./notes.md, ./pic.png) can't work in a PDF, and in the preview it 404s.
+// The way we solve this is to move its target from href to data-local (resolved against the launch folder): the printed PDF
+// keeps just the text, and the preview's click handler opens the file. In-page (#…) and external links stay real links.
+// flow: Preview tab — user switches to Preview -> renderMarkdown() -> localLinksPlugin <-- HERE
+function localLinksPlugin(md: Md, docPath: string | null) {
+  md.core.ruler.push("local_links", (state) => {
+    for (const block of state.tokens) {
+      for (const t of block.children ?? []) {
+        if (t.type !== "link_open") continue;
+        const local = resolveLocal(String(t.attrGet("href") ?? ""), docPath);
+        if (local == null) continue;
+        t.attrs = (t.attrs ?? []).filter(([k]) => k !== "href");
+        t.attrSet("data-local", local);
+      }
+    }
+  });
+}
+
+// The problem is a hand-written table of contents ([Intro](#1-intro)) needs every heading to have an id to jump to.
+// The way we solve this is GitHub-style slugs from the heading text, with -1, -2… on repeats; an explicit {#id} wins.
+// Understand: Chrome keeps these as internal links in the saved PDF, so the contents stay clickable there too.
+// flow: Preview tab — user switches to Preview -> renderMarkdown() -> headingIdsPlugin <-- HERE
+function headingIdsPlugin(md: Md) {
+  md.core.ruler.push("heading_ids", (state) => {
+    const tokens = state.tokens;
+    const used = new Set(tokens.filter((t) => t.type === "heading_open" && t.attrGet("id")).map((t) => String(t.attrGet("id"))));
+    tokens.forEach((t, i) => {
+      if (t.type !== "heading_open" || t.attrGet("id")) return;
+      const text = (tokens[i + 1].children ?? [])
+        .filter((c) => c.type === "text" || c.type === "code_inline")
+        .map((c) => c.content)
+        .join("");
+      const base = slugify(text) || "section";
+      let id = base;
+      for (let n = 1; used.has(id); n++) id = `${base}-${n}`;
+      used.add(id);
+      t.attrSet("id", id);
+    });
   });
 }
 
@@ -125,7 +165,7 @@ function codeKeepPlugin(md: Md) {
 }
 
 // The problem is turning the user's markdown into print-ready HTML with smart typography, page breaks and working images.
-// The way we solve this is markdown-it with KaTeX, typographer, pagebreak, typography, figure, keep-together and image-path plugins.
+// The way we solve this is markdown-it with KaTeX, typographer, pagebreak, typography, figure, keep-together, image-path, link and heading-id plugins.
 // flow: Preview tab — user switches to Preview -> renderDoc() -> renderMarkdown() <-- HERE
 export function renderMarkdown(body: string, opts: { docPath: string | null; typography: boolean }): string {
   const md = new MarkdownIt({ html: true, linkify: true, typographer: opts.typography })
@@ -137,6 +177,8 @@ export function renderMarkdown(body: string, opts: { docPath: string | null; typ
     .use(leadParagraphPlugin)
     .use(tableKeepPlugin)
     .use(codeKeepPlugin)
-    .use(resolveImagesPlugin, opts.docPath);
+    .use(resolveImagesPlugin, opts.docPath)
+    .use(localLinksPlugin, opts.docPath)
+    .use(headingIdsPlugin);
   return md.render(body);
 }

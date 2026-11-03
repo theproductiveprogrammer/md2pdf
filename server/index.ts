@@ -77,12 +77,28 @@ async function writeUnique(dir: string, name: string, data: Buffer): Promise<str
   }
 }
 
+const SKIP_DIRS = new Set(["node_modules", "dist", "build"]);
+
+// The problem is the user wants to pick which markdown file to open instead of being stuck with the one they launched on.
+// The way we solve this is to list a folder's subfolders and .md files, hiding dot-folders and build/dependency folders.
+// flow: File browser — user opens md2pdf on a folder or clicks a folder -> GET /api/list -> listFolder() <-- HERE
+async function listFolder(abs: string): Promise<{ dirs: string[]; files: string[] }> {
+  const entries = await fs.readdir(abs, { withFileTypes: true });
+  const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  const visible = entries.filter((e) => !e.name.startsWith("."));
+  return {
+    dirs: visible.filter((e) => e.isDirectory() && !SKIP_DIRS.has(e.name)).map((e) => e.name).sort(byName),
+    files: visible.filter((e) => e.isFile() && /\.(md|markdown)$/i.test(e.name)).map((e) => e.name).sort(byName),
+  };
+}
+
 // The problem is the browser app needs to read/save the markdown and load images sitting next to it on disk.
 // The way we solve this is a tiny API (/api/session, /api/doc, /api/upload, /files/*) answered before Vite sees the request.
 // flow: Write tab — user opens app -> loadSession() -> GET /api/session -> handleApi() <-- HERE
 // flow: Write tab — user presses ⌘S -> saveDoc() -> PUT /api/doc -> handleApi() <-- HERE
 // flow: Preview tab — iframe loads ./img.png -> GET /files/* -> handleApi() <-- HERE
 // flow: Write tab — user drops/pastes an image -> uploadImage() -> POST /api/upload -> handleApi() <-- HERE
+// flow: File browser — user opens a folder -> loadFolder() -> GET /api/list -> handleApi() <-- HERE
 async function handleApi(root: string, doc: string | null, req: http.IncomingMessage, res: http.ServerResponse): Promise<boolean> {
   const url = new URL(req.url ?? "/", "http://localhost");
 
@@ -100,6 +116,7 @@ async function handleApi(root: string, doc: string | null, req: http.IncomingMes
     const abs = safeResolve(root, url.searchParams.get("path") ?? "");
     if (!abs) return send(res, 403, "outside root"), true;
     if (req.method === "PUT") {
+      await fs.mkdir(path.dirname(abs), { recursive: true });
       await fs.writeFile(abs, await readBody(req), "utf8");
       send(res, 204, "");
     } else {
@@ -108,6 +125,17 @@ async function handleApi(root: string, doc: string | null, req: http.IncomingMes
       } catch {
         send(res, 404, "not found");
       }
+    }
+    return true;
+  }
+
+  if (url.pathname === "/api/list") {
+    const abs = safeResolve(root, url.searchParams.get("dir") ?? "");
+    if (!abs) return send(res, 403, "outside root"), true;
+    try {
+      send(res, 200, JSON.stringify(await listFolder(abs)), "application/json");
+    } catch {
+      send(res, 404, "not found");
     }
     return true;
   }
