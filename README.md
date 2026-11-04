@@ -15,7 +15,7 @@ md2pdf path/to/folder        # browse that folder's markdown files and open any 
 md2pdf                       # browse the current folder
 ```
 
-Each file opens in its own tab at `?doc=path/to/file.md`. Click **md2pdf** in the top bar to get back to the file browser, which also offers a **Scratch pad**: an unsaved document kept in the browser. Files can't be opened from outside the launch folder.
+Each file opens in its own tab at `?doc=path/to/file.md`, on the Preview tab; ⌘↵ switches to Write. Click **md2pdf** in the top bar to get back to the file browser, which also offers a **Scratch pad**: an unsaved document kept in the browser. Files can't be opened from outside the launch folder.
 
 Without `npm link`, use `node server/index.ts [path]`. The app opens at http://localhost:4848; if that port is taken it tries the next one. Pass `--no-open` to skip opening the browser.
 

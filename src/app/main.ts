@@ -371,8 +371,9 @@ async function main() {
       cycleTheme(e.key === "]" ? 1 : -1);
     }
   });
-  setTab("write");
-  renderDoc();
+  // Existing files are mostly opened to read or export, so they start on Preview; the scratch pad and new files start on Write.
+  if (state.docPath && !state.newFile) setTab("preview");
+  else (setTab("write"), renderDoc());
 }
 
 main();
