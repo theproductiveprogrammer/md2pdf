@@ -1,0 +1,15 @@
+[tasks.install]
+description = "Install dependencies, build the app and link the `md2pdf` command"
+run = ["npm install", "npm run build", "npm link"]
+
+[tasks.build]
+description = "Rebuild dist/ (md2pdf also does this at startup when the source changed)"
+run = "npm run build"
+
+[tasks.dev]
+description = "Run md2pdf from source with live reload (pass a file or folder after --)"
+run = "node server/index.ts --dev"
+
+[tasks.check]
+description = "Typecheck and run the tests"
+run = ["npm run typecheck", "npm test"]

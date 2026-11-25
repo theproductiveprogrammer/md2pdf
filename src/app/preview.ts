@@ -119,6 +119,7 @@ export class PreviewPool {
     }
     for (const f of this.host.querySelectorAll("iframe.shown")) if (f !== next) f.classList.remove("shown");
     next.classList.add("shown");
+    nudgeScroller(next);
   }
 
   // The problem is recolouring (e.g. the accent picker) should feel instant and not re-paginate anything.
@@ -151,6 +152,18 @@ export class PreviewPool {
     frame.contentWindow.print();
     document.title = previous;
   }
+}
+
+// The problem is a frame revealed after Paged.js grows the document can be drawn at full height while Chrome still treats its
+// scroller as not scrollable: trackpad and arrow keys do nothing until something (like flipping tabs) refreshes it.
+// The way we solve this is to force layout and move the scroll position one pixel and back, which makes Chrome rebuild it.
+function nudgeScroller(frame: HTMLIFrameElement) {
+  const w = frame.contentWindow;
+  if (!w) return;
+  void frame.offsetHeight;
+  const y = w.scrollY;
+  w.scrollTo(0, y + 1);
+  w.scrollTo(0, y);
 }
 
 // The problem is the preview frame borrows the app's address, so letting a link navigate it loads a second copy of the app
